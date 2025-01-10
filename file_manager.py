@@ -27,16 +27,17 @@ class FolderTree():
             list: List of subfolder paths.
 
         '''
-        def __init__(self, folder_path:str, mode:str, ATTEMPTS , ATTEMPTS_INTERVAL,  client=None, ):
+        def __init__(self, folder_path:str, mode:str, participants:List[str], ATTEMPTS , ATTEMPTS_INTERVAL,  client=None, ):
             """initializes folders and subfolders"""
             self.folder_path = folder_path
             self.subfolders = self._get_subfolders (mode, client,)
             self.mode = mode 
             self.client = client
+            self.participants = participants
             self.ATTEMPTS = ATTEMPTS
             self.ATTEMPTS_INTERVAL = ATTEMPTS_INTERVAL 
 
-        def _get_subfolders(self, client,):
+        def _get_subfolders(self):
                """gets list of subfolders based on the mode"""
                if self.mode == 'yandex':
                     if not self.client:
@@ -63,7 +64,7 @@ class FolderTree():
                else:
                     os.mkdir(folder_path)
 
-        def process_subfolders(self,):
+        def process_subfolders(self):
 
             """Match participants to their folders and create missing folders."""
             
@@ -76,7 +77,7 @@ class FolderTree():
             
             # Step 3: Create a list of words and corresponding participant names
             tem_list_participant = []
-            for participant_name in participants:
+            for participant_name in self.participants:
                 participant_words = normalize_string(participant_name.strip()).split(' ')
                 tem_list_participant.append([participant_words, participant_name])  # Store words and name
 

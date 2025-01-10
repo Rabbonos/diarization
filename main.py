@@ -74,8 +74,9 @@ def get_new_ytoken():
 
 
 def start():
-            participants_restore = participants
-            use_yandex=False
+            global client # LATER DO SOMETHING ABOUT IT!
+            global vad_pipeline #LATER DO SOMETHING ABOUT IT!
+
             main_audio_restore= main_audio
             speaker_model=None 
             junk = []
@@ -90,28 +91,27 @@ def start():
             if get_token =='да':
                    get_new_ytoken()
 
-            #главный файл (путь)
-            #main auido - ssilka / abs. path k audio
+            #main auido - can be a path or link to audio
+
             # if file does not exist in local system
             if not os.path.isfile(main_audio):              
                        main_audio =  download_audio(source, main_audio)
 
             logger.info(main_audio, 'MAIN AUDIO FILE"S PATH')
+
             #folders / files , sample folders here
-            folders_manager = FolderTree(main_folder, 'yandex', ATTEMPTS, ATTEMPTS_INTERVAL, client)
+            folders_manager = FolderTree(main_folder, 'yandex', participants, ATTEMPTS, ATTEMPTS_INTERVAL, client)
 
             participant_folder_paths , participants = folders_manager.process_subfolders()
-            #participants restore
-            #folders restore
 
             ###FRAGEMENTS HERE
             fragments = fragment(interval, main_audio , divide_interval, TEMP_FOLDER_MAIN, TEMP_FOLDER_FRAGMENTS )
-            
             logger.info(participant_folder_paths, 'participant_folder_paths')
+
             #HERE VECTORS AND AUDIO DATA
             sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, mode, client, ATTEMPTS, ATTEMPTS_INTERVAL)
-
             logger.info(sample_vectors, 'sample_vectors', sample_audios, 'sample_audios')
+
             # Remove participants who don't have any audio samples
             participants_with_samples = [name for name in participants if any(name == name_ for _, name_, _ in sample_audios)]
 
@@ -224,6 +224,10 @@ start()
 
 
 #NOT REFACTORED YET ...
+import re
+from pyannote.audio import Audio
+from pyannote.core import Segment
+
 
 #####################################################################################################
 
@@ -278,89 +282,16 @@ for line in transcribed_audio_lines:
     time_end= re.search ( pattern_time_end, line).group(0).strip() #need to convert from '0:01:49,000' to seconds
     time_start = str_to_seconds(time_start)
     time_end= str_to_seconds(time_end)
+    
+    folders_manager = FolderTree(main_folder, 'yandex', participants, ATTEMPTS, ATTEMPTS_INTERVAL, client)
 
-    if not name_ in participants_restore:
-        participants_restore.append(name_)
-        sample_folders_restore.append(os.path.join(main_folder, 'Образцы голоса', name_))
+    participant_folder_paths , participants = folders_manager.process_subfolders()
 
-    final_list = []
-    temp_list_folder = []
+    if not name_ in participants:
+        participants.append(name_)
+        participant_folder_paths.append(os.path.join(main_folder, name_))
 
-    # Step 2: Create a list of words and corresponding folder names for sample folders
-    for sample_folder in sample_folders_restore:
-                sample_folder_words = normalize_string(sample_folder.strip()).split('/')[-1].strip().split(' ') # Split folder name into words
-                temp_list_folder.append([sample_folder_words, sample_folder])  # Store words and name
-    tem_list_participant = []
-    # Step 3: Create a list of words and corresponding participant names
-    for participant in participants_restore:
-        participant_words = normalize_string(participant.strip()).split(' ')
-        tem_list_participant.append([participant_words, participant])  # Store words and name
-    # Step 4: Compare the lists and find matches
-    double_list=[]
-    for y in tem_list_participant:
-                flag=False
-                for x in temp_list_folder:
-                    # Check if any two values in x[0] match any two values in y[0]
-                    if len(set(x[0]).intersection(set(y[0]))) >= 2:  # At least 2 matching words
-                        final_list.append(x[1])  # Append the folder name to the final list
-                        double_list.append([x[1],y[0]])
-                        flag=True
-                        break
-                if flag==False:
-                    names_string=''
-                    for string_ in y[0]:
-                        names_string =names_string +' '+ string_
-                    names_string=names_string.strip()
-                    folder= os.path.join (main_folder, 'Образцы голоса', names_string)
-                    print(f'для участника {y[0]} не нашлась папка, создаю новую:{ folder }')
-
-                    client.mkdir(folder, n_retries = attempts  , retry_interval =attempts_interval)
-                    final_list.append(folder)
-                    double_list.append([folder,y[0]])
-
-    sample_folders_restore = [x[0] for x in double_list]
-    participants_restore = [' '.join(x[1]) for x in double_list]
-    if use_yandex:
-                  with client:
-                              sample_audios = []
-                              for folder,name in zip(sample_folders_restore, participants_restore):
-                                  if normalize_string(name)==normalize_string(name_):
-                                        flag=True
-                                        sample_path=folder
-                                        files= client.listdir(folder, n_retries = attempts  , retry_interval =attempts_interval)
-                                        for file in files:
-
-                                          try:
-                                              file_type=file['type']
-                                              file=file['path']
-                                              if 'wav' in file:
-                                                  match = re.search(r'_(\d+)\.wav', file)
-                                                  if match:
-                                                      if int(last_number) <  int(match.group(1)):
-                                                          last_number= int(match.group(1))
-                                          except:pass
-                                          if not file.endswith('.json') and file_type!='dir':
-                                                  sample_audios.append([file, name, folder])
-
-
-
-    else:
-        sample_audios = []
-        for folder,name in zip(sample_folders_restore,participants_restore):
-              if normalize_string(name)==normalize_string(name_):
-                  flag=True
-                  sample_path=folder
-                  for file in os.listdir(folder):
-                      try:
-                          if 'wav' in file:
-                              match = re.search(r'_(\d+)\.wav', file)
-                              if match:
-                                  if int(last_number) <  int(match.group(1)):
-                                      last_number= int(match.group(1))
-
-                      except: pass
-                      if not file.endswith('.json') and os.path.isfile(os.path.join(folder,file)):
-                          sample_audios.append([file, name, folder])
+    sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, mode, client, ATTEMPTS, ATTEMPTS_INTERVAL)
 
     if name_ and flag:
 
@@ -378,16 +309,15 @@ for line in transcribed_audio_lines:
 
             # sample_waveform to audio
             sf.write('cropped_fragment.wav', sample_waveform, samplerate=16000, format='WAV')
+
             result_of_vad= vad_pipeline('cropped_fragment.wav')
             time_segments=result_of_vad.get_timeline() # time segments of active speech
 
             if len(time_segments)>0:
                             main_wave_audio = Audio()
                             waveforms=[]
-                            with contextlib.closing(wave.open('cropped_fragment.wav', 'r')) as f:
-                                        frames = f.getnframes()
-                                        rate = f.getframerate()
-                                        duration = frames / float(rate)
+                            duration= get_duration('cropped_fragment.wav')
+
                             for time_segment in time_segments:
                                   speech_start = time_segment.start
                                   speech_end = time_segment.end
@@ -400,22 +330,19 @@ for line in transcribed_audio_lines:
                             if waveforms:
                                         final_waveform = np.concatenate(waveforms, axis=-1)
                             # final_waveform to audio
-                            if use_yandex:
-
-                                                sf.write('sample_sample.wav', final_waveform, samplerate=16000, format='WAV')
-
-                                                client.upload("sample_sample.wav", sample_path, n_retries = attempts  , retry_interval =attempts_interval)
+                            if mode=='yandex':
+                                    sf.write('sample_sample.wav', final_waveform, samplerate=16000, format='WAV')
+                                    client.upload("sample_sample.wav", sample_path, n_retries = ATTEMPTS  , retry_interval =ATTEMPTS_INTERVAL)
 
                             else: sf.write(sample_path, final_waveform, samplerate=16000, format='WAV')
 
             else:
-                  if use_yandex:
+                  if mode=='yandex':
+                                sf.write('sample_sample.wav', sample_waveform, samplerate=16000, format='WAV')
 
-                                    sf.write('sample_sample.wav', sample_waveform, samplerate=16000, format='WAV')
-
-                                    client.upload("sample_sample.wav", sample_path, n_retries = attempts  , retry_interval =attempts_interval)
-
+                                client.upload("sample_sample.wav", sample_path, n_retries = ATTEMPTS  , retry_interval =ATTEMPTS_INTERVAL)
                   else: sf.write(sample_path, sample_waveform, samplerate=16000, format='WAV')
+
             count+=1
             print('сохраняет в :', sample_path)
 
