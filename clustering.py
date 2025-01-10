@@ -4,6 +4,7 @@ from sklearn.metrics import silhouette_score
 import warnings
 import numpy as np
 import hdbscan
+from typing import List, Tuple , Optional
 
 class ClusteringModel:
      '''
@@ -335,3 +336,103 @@ class ClusteringModel:
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels
+     
+
+
+
+def assign_speakers(clustering_manager:ClusteringModel, embeddings:List[np.array], segments:List[dict] , sample_embeddings:List[Tuple], SIMILARITY_THRESHOLD:float=None, UNASSIGNED_LABEL = "Участник (не определён)" ) -> List[str]:
+        '''
+        Assigns speakers by comparing embeddings of audio segments with samples.
+    
+        Args:
+            clustering_manager (ClusteringModel): Object that handles clustering.
+            embeddings (np.ndarray): 2D array of shape (n_segments, embedding_dim) for segment embeddings.
+            segments (List[dict]): List of dictionaries describing audio segments.
+            sample_embeddings (List[Tuple]): List of (embedding, speaker_name) tuples for known speakers.
+            similarity_threshold (float, optional): Threshold for cosine similarity. Defaults to None.
+
+        Returns:
+            List[str]: Speaker names or `UNASSIGNED_LABEL` for each segment.
+
+        We start with list of embeddings (for each segment)
+        We then cluster the embeddings of the segments, grouping similar segments together. 
+        Once the segments are clustered, we assign a speaker label to each one by comparing the cluster’s centroid with known speaker samples.
+        '''
+        cluster_labels= clustering_manager.cluster(embeddings)###
+        assigned_speakers = [None] * len(segments)
+        cluster_to_speaker = {}
+
+        for cluster_id in np.unique(cluster_labels):
+
+            cluster_indices = np.where(cluster_labels == cluster_id)[0]
+            cluster_embeddings = embeddings[cluster_indices]
+            centroid = np.mean(cluster_embeddings, axis=0)
+
+            #norm - (p-norm) , default is p-2 (L2) norm a.k.a euclidian distance
+            similarities = [
+                (np.dot(centroid, sample_embedding.T) / (np.linalg.norm(centroid) * np.linalg.norm(sample_embedding)), person_name) #cosine similarity
+                for sample_embedding, person_name in sample_embeddings
+                            ]
+            
+            similarity_scores = [similarity for similarity, person_name in similarities]
+            if SIMILARITY_THRESHOLD == None:
+                mean_similarity = np.mean(similarity_scores)
+                std_similarity = np.std(similarity_scores)
+                SIMILARITY_THRESHOLD = mean_similarity + std_similarity/1 ############################
+
+            max_similarity, most_similar_person = max(similarities, key=lambda x: x[0])
+
+            if max_similarity >= SIMILARITY_THRESHOLD:
+                cluster_to_speaker[cluster_id] = most_similar_person
+            else:
+                cluster_to_speaker[cluster_id] = UNASSIGNED_LABEL 
+
+        for i, segment in enumerate(segments):
+            if cluster_labels[i] in cluster_to_speaker:
+                 assigned_speakers[i] = cluster_to_speaker[cluster_labels[i]]
+            else:
+                 warnings.warn(f"Segment {i} with cluster ID {cluster_labels[i]} was not assigned a speaker.")
+
+        return assigned_speakers
+
+def assign_speakers_individually(segments:List[dict], embeddings :List[np.ndarray],  sample_embeddings: List[Tuple[np.ndarray, str]], SIMILARITY_THRESHOLD: Optional[float] = None, UNASSIGNED_LABEL = "Участник (не определён)" ) -> List[str]:
+            """
+            Assign speakers to audio segments by comparing each segment embedding with all sample embeddings.
+            Similar to function 'assign_speakers', main difference - no clustering done here.
+
+            Args:
+                segments (List[dict]): List of audio segments.
+                embeddings (List[np.ndarray]): List of embeddings for each segment.
+                sample_embeddings (List[Tuple[np.ndarray, str]]): List of tuples containing sample embeddings and corresponding speaker names.
+                SIMILARITY_THRESHOLD (float, optional): The threshold for similarity to consider a segment as matching a speaker. 
+                                                    If not provided, it will be calculated as the mean similarity plus one standard deviation.
+
+            Returns:
+                List[str]: List of speaker names assigned to each segment.
+            """
+
+            assigned_speakers = [''] * len(segments)
+            
+            for i, embedding in enumerate(embeddings):
+
+                similarities = [
+                        (np.dot(embedding, sample_embedding.T) / (np.linalg.norm(embedding) * np.linalg.norm(sample_embedding)), person_name) #cosine similarity
+                        for sample_embedding, person_name in sample_embeddings
+                                ]
+                similarity_scores = [similarity for similarity, _ in similarities]
+                max_similarity, most_similar_person = max(similarities, key=lambda x: x[0])
+
+                if SIMILARITY_THRESHOLD == None:
+                    mean_similarity = np.mean(similarity_scores)
+                    std_similarity = np.std(similarity_scores)
+                    SIMILARITY_THRESHOLD = mean_similarity + std_similarity/1
+
+                if max_similarity > SIMILARITY_THRESHOLD:
+                    assigned_speakers[i] = most_similar_person
+                else:
+                    assigned_speakers[i] = UNASSIGNED_LABEL
+                    #No need now, will need if add numbers to unassigned speakers
+                    #sample_embeddings.append([ embedding , UNASSIGNED_LABEL]) #Adding new embedding, when useful: to group all unassigned similar speakers together
+                    warnings.warn(f"Segment {i} not assigned to any known speaker.")
+                
+            return assign_speakers

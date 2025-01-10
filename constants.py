@@ -46,6 +46,7 @@ Accuracy_boost=True
 
 # huggingface token для модели (иногда нужен)
  #userdata.get('huggingface_token')
+HUGGINGFACE_TOKEN='...'
 
 # Модели эмдеддингов / векторов
 #варианты: 'pyannote/embedding', 'speechbrain/spkrec-ecapa-voxceleb', 'nvidia/speakerverification_en_titanet_large', 'hbredin/wespeaker-voxceleb-resnet34-LM' , 'titanet_large' , 'ecapa_tdnn' , 'speakerverification_speakernet'
