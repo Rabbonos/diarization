@@ -221,3 +221,544 @@ def start():
             remove_junk(junk)
               
 start()
+
+
+#NOT REFACTORED YET ...
+
+#####################################################################################################
+
+transcribed_audio='''
+[0:00:19,000 --> 0:00:21,000] Ермолаева Ирина:  Да ничего страшного Алексей
+[0:00:21,000 --> 0:00:23,000] Ермолаева Ирина:  главное что мы все собрались
+[0:00:23,000 --> 0:00:25,000] Ермолаева Ирина:  сегодня у нас с вами будет встреча с Александрой
+[0:00:25,000 --> 0:00:27,000] Ермолаева Ирина:  Александр у нас
+[0:00:27,000 --> 0:00:29,000] Ермолаева Ирина:  Александр как сейчас должность
+[0:21:38,000 --> 0:21:41,000] Пчеловодова Александра:  Здесь от вас не ожидается никаких
+[0:21:41,000 --> 0:21:44,000] Пчеловодова Александра:  дополнительных описаний, интеграций и так далее.
+[0:21:44,000 --> 0:21:48,000] Пчеловодова Александра:  Это чисто такое тезис пользовательской точки зрения.
+[0:21:48,000 --> 0:21:51,000] Пчеловодова Александра:  Там вот описание странички, что на ней есть,
+[0:21:51,000 --> 0:21:55,000] Пчеловодова Александра:  как те или иные элементы взаимодействуют между собой,
+[0:21:55,000 --> 0:21:57,000] Пчеловодова Александра:  как те или иные страницы сметчатся,
+[0:21:57,000 --> 0:22:00,000] Пчеловодова Александра:  как те или иные поля, грубо говоря.
+[0:22:00,000 --> 0:22:07,900] Пчеловодова Александра:  Соответственно, команда будет проводить параллельно работы по написанию back-end-up для админки,
+[0:22:07,900 --> 0:22:13,259] Пчеловодова Александра:  потом фронта и, соответственно, параллельно поддерживать текущие новостные сайты.
+[0:22:13,259 --> 0:22:16,799] Пчеловодова Александра:  По ним прилетают порой горящие задачи и так далее.
+[0:22:16,799 --> 0:22:21,500] Пчеловодова Александра:  Я хочу сделать также, что специфика работы — это то, что все-таки не дикая, это 24 на 7.
+[0:22:21,500 --> 0:22:27,740] Пчеловодова Александра:  То есть если какие-то бывают поломки, и не факт, что там техподдержка может управляться
+[0:22:27,740 --> 0:22:31,539] Пчеловодова Александра:  или их обрабатывать, или просто вам нужно как проекту подключиться,
+[0:22:31,539 --> 0:22:36,039] Пчеловодова Александра:  то есть могут вам позвонить в любое время дня и ночи, праздник, не праздник, еще что-то.
+[0:22:36,039 --> 0:22:39,539] Пчеловодова Александра:  Это специфика сферы, нужно это учитывать.
+[0:22:39,539 --> 0:22:45,299] Пчеловодова Александра:  Естественно, такие-то переработки и так далее оплачиваются, но это не та работа,
+[0:22:45,299 --> 0:22:49,339] Пчеловодова Александра:  где ты закончил работать в 7 вечера, закрыл ноутбук и ушел.
+'''
+
+pattern_time_start = re.compile('(?<=\[).*(?=-->)')
+pattern_time_end = re.compile('(?<=-->).*(?=])')
+pattern_name = re.compile(r'(?<=\])\s*(.*?)(?=:)\s*')
+pattern_text = re.compile('(?<=:) .*')
+transcribed_audio_lines= transcribed_audio.split('\n')
+transcribed_audio_lines=[line for line in transcribed_audio_lines if len(line)>3]
+print('всего строк: ',len(transcribed_audio_lines))
+print(transcribed_audio_lines)
+count=0
+def str_to_seconds(time):
+        time = time.split(':')
+        hours = int(time[0])  # Convert hours to integer
+        minutes = int(time[1])  # Convert minutes to integer
+        seconds = float(time[2].replace(',', '.'))  # Convert seconds to float, replacing ',' with '.'
+        return  hours * 3600 + minutes * 60 + seconds
+
+for line in transcribed_audio_lines:
+
+    last_number=0
+    flag=False
+    name_= re.search ( pattern_name, line).group(0).strip()
+    text= re.search ( pattern_text, line).group(0).strip()
+    time_start=re.search ( pattern_time_start, line).group(0).strip() #need to convert from '0:01:49,000' to seconds
+    time_end= re.search ( pattern_time_end, line).group(0).strip() #need to convert from '0:01:49,000' to seconds
+    time_start = str_to_seconds(time_start)
+    time_end= str_to_seconds(time_end)
+
+    if not name_ in participants_restore:
+        participants_restore.append(name_)
+        sample_folders_restore.append(os.path.join(main_folder, 'Образцы голоса', name_))
+
+    final_list = []
+    temp_list_folder = []
+
+    # Step 2: Create a list of words and corresponding folder names for sample folders
+    for sample_folder in sample_folders_restore:
+                sample_folder_words = normalize_string(sample_folder.strip()).split('/')[-1].strip().split(' ') # Split folder name into words
+                temp_list_folder.append([sample_folder_words, sample_folder])  # Store words and name
+    tem_list_participant = []
+    # Step 3: Create a list of words and corresponding participant names
+    for participant in participants_restore:
+        participant_words = normalize_string(participant.strip()).split(' ')
+        tem_list_participant.append([participant_words, participant])  # Store words and name
+    # Step 4: Compare the lists and find matches
+    double_list=[]
+    for y in tem_list_participant:
+                flag=False
+                for x in temp_list_folder:
+                    # Check if any two values in x[0] match any two values in y[0]
+                    if len(set(x[0]).intersection(set(y[0]))) >= 2:  # At least 2 matching words
+                        final_list.append(x[1])  # Append the folder name to the final list
+                        double_list.append([x[1],y[0]])
+                        flag=True
+                        break
+                if flag==False:
+                    names_string=''
+                    for string_ in y[0]:
+                        names_string =names_string +' '+ string_
+                    names_string=names_string.strip()
+                    folder= os.path.join (main_folder, 'Образцы голоса', names_string)
+                    print(f'для участника {y[0]} не нашлась папка, создаю новую:{ folder }')
+
+                    client.mkdir(folder, n_retries = attempts  , retry_interval =attempts_interval)
+                    final_list.append(folder)
+                    double_list.append([folder,y[0]])
+
+    sample_folders_restore = [x[0] for x in double_list]
+    participants_restore = [' '.join(x[1]) for x in double_list]
+    if use_yandex:
+                  with client:
+                              sample_audios = []
+                              for folder,name in zip(sample_folders_restore, participants_restore):
+                                  if normalize_string(name)==normalize_string(name_):
+                                        flag=True
+                                        sample_path=folder
+                                        files= client.listdir(folder, n_retries = attempts  , retry_interval =attempts_interval)
+                                        for file in files:
+
+                                          try:
+                                              file_type=file['type']
+                                              file=file['path']
+                                              if 'wav' in file:
+                                                  match = re.search(r'_(\d+)\.wav', file)
+                                                  if match:
+                                                      if int(last_number) <  int(match.group(1)):
+                                                          last_number= int(match.group(1))
+                                          except:pass
+                                          if not file.endswith('.json') and file_type!='dir':
+                                                  sample_audios.append([file, name, folder])
+
+
+
+    else:
+        sample_audios = []
+        for folder,name in zip(sample_folders_restore,participants_restore):
+              if normalize_string(name)==normalize_string(name_):
+                  flag=True
+                  sample_path=folder
+                  for file in os.listdir(folder):
+                      try:
+                          if 'wav' in file:
+                              match = re.search(r'_(\d+)\.wav', file)
+                              if match:
+                                  if int(last_number) <  int(match.group(1)):
+                                      last_number= int(match.group(1))
+
+                      except: pass
+                      if not file.endswith('.json') and os.path.isfile(os.path.join(folder,file)):
+                          sample_audios.append([file, name, folder])
+
+    if name_ and flag:
+
+            i=last_number
+            path= main_audio.split('/')[-1].split('.')[0]
+            path= f'{path}-{name_}_{i+1}.wav'
+            sample_path=os.path.join(sample_path,  path )
+            sample_audio = Audio()
+            sample_clip = Segment( time_start , time_end)
+
+            sample_waveform, _ = sample_audio.crop('audio.wav', sample_clip)
+
+            sample_waveform=sample_waveform.squeeze(0)
+            sample_waveform=sample_waveform.squeeze(0)
+
+            # sample_waveform to audio
+            sf.write('cropped_fragment.wav', sample_waveform, samplerate=16000, format='WAV')
+            result_of_vad= vad_pipeline('cropped_fragment.wav')
+            time_segments=result_of_vad.get_timeline() # time segments of active speech
+
+            if len(time_segments)>0:
+                            main_wave_audio = Audio()
+                            waveforms=[]
+                            with contextlib.closing(wave.open('cropped_fragment.wav', 'r')) as f:
+                                        frames = f.getnframes()
+                                        rate = f.getframerate()
+                                        duration = frames / float(rate)
+                            for time_segment in time_segments:
+                                  speech_start = time_segment.start
+                                  speech_end = time_segment.end
+                                  speech_end = min(duration, speech_end)
+                                  main_clip = Segment( speech_start , speech_end)
+                                  main_waveform, _ = main_wave_audio.crop('cropped_fragment.wav', main_clip)
+                                  main_waveform=main_waveform.squeeze(0)
+                                  main_waveform=main_waveform.squeeze(0)
+                                  waveforms.append(main_waveform)
+                            if waveforms:
+                                        final_waveform = np.concatenate(waveforms, axis=-1)
+                            # final_waveform to audio
+                            if use_yandex:
+
+                                                sf.write('sample_sample.wav', final_waveform, samplerate=16000, format='WAV')
+
+                                                client.upload("sample_sample.wav", sample_path, n_retries = attempts  , retry_interval =attempts_interval)
+
+                            else: sf.write(sample_path, final_waveform, samplerate=16000, format='WAV')
+
+            else:
+                  if use_yandex:
+
+                                    sf.write('sample_sample.wav', sample_waveform, samplerate=16000, format='WAV')
+
+                                    client.upload("sample_sample.wav", sample_path, n_retries = attempts  , retry_interval =attempts_interval)
+
+                  else: sf.write(sample_path, sample_waveform, samplerate=16000, format='WAV')
+            count+=1
+            print('сохраняет в :', sample_path)
+
+print('Фрагментов добавленно: ',count )
+
+
+
+
+
+###########################################################################
+
+
+
+# Обновление векторов (только тех участников, которых отметили в настройках + у которых было обнаружено аудио т.к. без аудио не будет векторов).
+
+#ADD LOGIC THAT CREATES FOLDERS IF THEY ARE NOT PRESENT !
+def handle_yandex_json(client, json_path, folder_name, name, dict_for_json):
+    """
+    Handles JSON operations with Yandex disk, ensuring complete file transfers
+    """
+    try:
+        # Create a temporary local file for operations
+        temp_local_path = f"temp_{name}.json"
+
+        # Download existing JSON if it exists
+        try:
+
+            client.download(json_path, temp_local_path, n_retries = attempts  , retry_interval =attempts_interval)
+            with open(temp_local_path, 'r') as f:
+                existing_data = json.load(f)
+        except:
+            existing_data = {}
+
+        # Update with new data
+        existing_data.update(dict_for_json)
+
+        # Write updated data to temporary file
+        with open(temp_local_path, 'w') as f:
+            json.dump(existing_data, f, indent=4)
+            f.flush()
+            os.fsync(f.fileno())  # Ensure all data is written to disk
+
+        # Remove existing file on Yandex if it exists
+
+
+        client.remove(json_path, permanently=True, n_retries = attempts  , retry_interval =attempts_interval)
+
+
+        # Upload new file and verify
+        client.upload(temp_local_path, json_path, n_retries = attempts  , retry_interval =attempts_interval)
+
+        # Verify upload was successful
+        client.download(json_path, f"verify_{name}.json", n_retries = attempts  , retry_interval =attempts_interval)
+        with open(f"verify_{name}.json", 'r') as f:
+            verify_data = json.load(f)
+
+        if verify_data != existing_data:
+            raise Exception("Upload verification failed - data mismatch")
+
+        # Cleanup temporary files
+        os.remove(temp_local_path)
+        os.remove(f"verify_{name}.json")
+
+        return True
+
+    except Exception as e:
+        print(f"Error handling JSON for {name}: {str(e)}")
+        return False
+
+# Step 1: List sample folders
+if use_yandex:
+
+                sample_folders_names = client.listdir(os.path.join(main_folder, 'Образцы голоса'), n_retries = attempts  , retry_interval =attempts_interval)
+
+
+                sample_folders_names= [x['path'] for x in sample_folders_names]
+
+else: sample_folders_names = [ os.path.join(main_folder, 'Образцы голоса',x)  for x  in os.listdir(os.path.join(main_folder, 'Образцы голоса')) ]
+
+final_list = []
+temp_list_folder = []
+# Step 2: Create a list of words and corresponding folder names for sample folders
+for sample_folder in sample_folders_names:
+                sample_folder_words = normalize_string(sample_folder.strip()).split('/')[-1].strip().split(' ') # Split folder name into words
+                temp_list_folder.append([sample_folder_words, sample_folder])  # Store words and name
+
+tem_list_participant = []
+# Step 3: Create a list of words and corresponding participant names
+for participant in participants_restore:
+    participant_words = normalize_string(participant.strip()).split(' ')
+    tem_list_participant.append([participant_words, participant])  # Store words and name
+
+# Step 4: Compare the lists and find matches
+double_list=[]
+for y in tem_list_participant:
+        flag=False
+        for x in temp_list_folder:
+            # Check if any two values in x[0] match any two values in y[0]
+            if len(set(x[0]).intersection(set(y[0]))) >= 2:  # At least 2 matching words
+                final_list.append(x[1])  # Append the folder name to the final list
+                double_list.append([x[1],y[0]])
+                flag=True
+                break
+        if flag==False:
+            names_string=''
+            for string_ in y[0]:
+                names_string =names_string +' '+ string_
+            names_string=names_string.strip()
+            folder= os.path.join (main_folder, 'Образцы голоса', names_string)
+            print(f'для участника {y[0]} не нашлась папка, создаю новую:{ folder }')
+
+            client.mkdir(folder, n_retries = attempts  , retry_interval =attempts_interval)
+
+            final_list.append(folder)
+            double_list.append([folder,y[0]])
+
+# Update sample_folders with final_list
+sample_folders_restore = [x[0] for x in double_list]
+participants = [' '.join(x[1]) for x in double_list]
+
+for i in range (attempts):
+
+      try:
+
+              if use_yandex:
+                            with client:
+
+                                        sample_vectors = []
+                                        for folder,name in zip(sample_folders_restore, participants):
+
+                                                            found_json = False
+
+                                                            ###########
+
+                                                            files= client.listdir(folder, n_retries = attempts  , retry_interval =attempts_interval)
+                                                            for file in files:
+                                                                      file=file['path']
+                                                                      if file.endswith('.json'):
+                                                                              sample_vectors.append([file, name, folder])
+                                                                              found_json = True
+
+                                                            if not found_json:
+                                                                    empty_json_path = f"{name}.json"
+                                                                    empty_json_path_for_upload = os.path.join(folder, f"{name}.json")
+                                                                    with open(empty_json_path, 'w') as f:
+                                                                              json.dump({}, f)  # Creates an empty JSON file with an empty dictionary
+
+                                                                              client.upload(empty_json_path, empty_json_path_for_upload , n_retries = attempts  , retry_interval =attempts_interval)
+                                                                    sample_vectors.append([empty_json_path, name, folder])
+              else:
+                    sample_vectors = []
+                    for folder,name in zip(sample_folders_restore, participants):
+
+                                        found_json = False
+                                        for file in os.listdir(folder):
+                                                  if file.endswith('.json'):
+                                                          sample_vectors.append([file, name, folder])
+                                                          found_json = True
+
+                                        if not found_json:
+                                                empty_json_path = os.path.join(folder, f"{name}.json")
+                                                with open(empty_json_path, 'w') as f:
+                                                          json.dump({}, f)  # Creates an empty JSON file with an empty dictionary
+                                                sample_vectors.append([empty_json_path, name, folder])
+
+              if use_yandex:
+                  for jsonfile, name, folder_name in sample_vectors:
+                    try:
+                        ############
+
+
+                        client.remove(jsonfile, permanently=True)
+
+                    except:pass
+              else:
+                  for jsonfile, name, folder_name in sample_vectors:
+                    try:
+                        os.remove(os.path.join(folder_name,jsonfile))
+                    except:
+                        pass
+
+
+              if use_yandex:
+                            with client:
+
+                                        sample_vectors = []
+                                        for folder,name in zip(sample_folders_restore, participants):
+                                                            found_json = False
+
+                                                            ##############
+
+                                                            files= client.listdir(folder, n_retries = attempts  , retry_interval =attempts_interval)
+                                                            for file in files:
+
+                                                                      file=file['path']
+                                                                      if file.endswith('.json'):
+                                                                              sample_vectors.append([file, name, folder])
+                                                                              found_json = True
+
+                                                            if not found_json:
+                                                                    temp_dict={}
+                                                                    empty_json_path = f"{name}.json"
+                                                                    empty_json_path_for_upload = os.path.join(folder, f"{name}.json")
+                                                                    with open(empty_json_path, 'w') as f:
+                                                                              json.dump(temp_dict, f)  # Creates an empty JSON file with an empty dictionary
+                                                                              ########
+
+                                                                              client.upload(empty_json_path, empty_json_path_for_upload, n_retries = attempts  , retry_interval =attempts_interval )
+                                                                    sample_vectors.append([empty_json_path, name, folder])
+
+
+                                        sample_audios = []
+                                        for folder,name in zip(sample_folders_restore, participants):
+                                                  ##########
+
+                                                  files= client.listdir(folder, n_retries = attempts  , retry_interval =attempts_interval)
+                                                  for file in files:
+                                                      file_type=file['type']
+                                                      file=file['path']
+                                                      if not file.endswith('.json') and file_type!='dir':
+                                                          sample_audios.append([file, name, folder])
+              else:
+                    sample_vectors = []
+                    for folder,name in zip(sample_folders_restore, participants):
+
+                                        found_json = False
+                                        for file in os.listdir(folder):
+                                                  if file.endswith('.json'):
+                                                          sample_vectors.append([file, name, folder])
+                                                          found_json = True
+
+                                        if not found_json:
+                                                temp_dict={}
+                                                empty_json_path = os.path.join(folder, f"{name}.json")
+                                                with open(empty_json_path, 'w') as f:
+                                                          json.dump(temp_dict, f)  # Creates an empty JSON file with an empty dictionary
+                                                sample_vectors.append([empty_json_path, name, folder])
+
+
+                    sample_audios = []
+                    for folder,name in zip(sample_folders_restore, participants):
+
+                              for file in os.listdir(folder):
+                                  if not file.endswith('.json')and os.path.isfile(os.path.join(folder,file)):
+                                      sample_audios.append([file, name, folder])
+
+
+              print(sample_audios,'sample_audios')
+              for file, name, folder_name in sample_audios:
+
+                        if use_yandex:
+                            sample_path=file
+
+                        else:
+                            sample_path = os.path.join( main_folder ,'Образцы голоса', folder_name ,file)
+
+                        if use_yandex:
+                            #######
+
+                            client.download(sample_path, 'sample_path', n_retries = attempts  , retry_interval =attempts_interval )
+                        dict_for_json={}
+                        sample_audio = Audio()
+                        sample_wav_path = f'sample_voice.wav'
+
+                        if use_yandex:
+                                      subprocess.call(['ffmpeg', '-i', 'sample_path', '-ar', '16000', '-ac', '1', '-sample_fmt', 's16', '-frame_size', '400', '-y', sample_wav_path])
+                        else:
+                                      subprocess.call(['ffmpeg', '-i', sample_path, '-ar', '16000', '-ac', '1', '-sample_fmt', 's16', '-frame_size', '400', '-y', sample_wav_path]) #некоторые библиотеки так требуют
+
+                        with contextlib.closing(wave.open(sample_wav_path, 'r')) as f:
+                            sample_frames = f.getnframes()
+                            sample_rate = f.getframerate()
+                            sample_duration = sample_frames / float(sample_rate)
+
+                        if sample_duration<1:
+                            continue
+
+
+                        try:
+                            sample_clip = Segment(0, sample_duration)
+                            sample_waveform, _ = sample_audio.crop(sample_wav_path, sample_clip)
+                            if embedding_model_name in embedding_models_group1:
+                                sample_embedding= embedding_model(sample_waveform[None])
+                            else:
+                                sample_embedding=embedding_model(speaker_model, sample_waveform[None]).cpu()
+
+                            dict_for_json[f'{sample_path}']=[sample_embedding.tolist()[0]]
+
+
+                            #
+                            for json_path, name_ , folder_name_ in sample_vectors:
+
+
+                                if normalize_string(name) == normalize_string(name_):
+
+                                      if use_yandex:
+                                            json_path=os.path.join(folder_name ,  f'{name}.json')
+                                      else:
+                                            json_path= os.path.join(  main_folder ,'Образцы голоса', folder_name ,  f'{name}.json')
+
+                                      found=False
+                                      if use_yandex:
+                                              ############
+
+                                              files= client.listdir(folder_name, n_retries = attempts  , retry_interval =attempts_interval)
+                                              for path in files:
+                                                path=path['path']
+                                                if normalize_string(path) == normalize_string(json_path):
+                                                    found=True
+                                                    break
+                                              if found==True:
+                                                    ############
+                                                    handle_yandex_json(client=client,
+                                                                      json_path=json_path,
+                                                                      folder_name=folder_name,
+                                                                      name=name,
+                                                                      dict_for_json=dict_for_json)
+
+                                      else:
+                                            for path in os.listdir( os.path.join(  main_folder ,'Образцы голоса', folder_name )):
+                                                  path= os.path.join(  main_folder ,'Образцы голоса', folder_name , path )
+
+                                                  if normalize_string(path.strip()) == normalize_string(json_path.strip()):
+
+                                                      found=True
+
+                                                      break
+
+
+                                            if found==True:
+
+                                                    vectorized_sample_old =read_json(json_path)
+                                                    vectorized_sample_old.update(dict_for_json)
+                                                    with open(json_path, 'w') as f:
+                                                            json.dump(vectorized_sample_old, f, indent=4)
+
+                                                    print(name, json_path , sample_path)
+
+                        except Exception as e:
+                            print(f'ошибка (иногда бывает если аудио слишком короткое - нормально это, если не короткое то реально ошибка): {str(e)}')
+
+
+              break
+      except Exception as e:
+              sleep(attempts_interval)
+              print(f'ошибка {str(e)}')
