@@ -7,7 +7,6 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-huggingface-hub = "0.23.2"
 hdbscan = "^0.8.40"
 soundfile = "^0.12.1"
 llvmlite = "^0.43.0"
@@ -16,6 +15,11 @@ pyannote-audio = "^3.3.2"
 openai-whisper = "^20240930"
 speechbrain = "^1.0.2"
 python-docx = "^1.1.2"
+yadisk = {extras = ["sync-defaults"], version = "^3.1.0"}
+gdown = "^5.2.0"
+onnxruntime = "^1.20.1"
+nemo-toolkit = {extras = ["nemo"], version = "^2.1.0"}
+huggingface-hub = "^0.27.1"
 
 
 [build-system]
