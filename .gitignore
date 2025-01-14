@@ -1,1 +1,9 @@
-.venv
+# Ignore Python virtual environment directory
+.venv/
+
+# Ignore all .wav files
+*.wav
+
+# Ignore specific directories
+voices_split/
+main_audio/
