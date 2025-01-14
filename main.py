@@ -17,7 +17,7 @@
 #TO ADD: tones 
 #TO ADD: TRAINING 
 #TO ADD: TRAINING DATA PREPARATION
-#TO ADD: async stuff + caching
+#TO ADD: async stuff + CACHING!
 # from google.colab import files
 # from google.colab import userdata
 
@@ -32,50 +32,31 @@ from audio_processing import fragment, download_audio, preprocess_segments, main
 from audio_processing import AudioProcessor, get_sample_embeddings , replace_overlaps, use_vectors , get_embeddings_main_audio
 from clustering import ClusteringModel, assign_speakers, assign_speakers_individually
 from file_manager import FolderTree, fetch_vectors_and_audio_files
-from constants import *
 from video import get_duration
 from manage_output import print_transcription, save_transcription, write_to_word, remove_junk
 from Logging_config import configure_logging
 import logging
-
+from yandex import get_new_ytoken
+from constants import *
 
 configure_logging()
 logger = logging.getLogger('newlogger')
 
-def get_new_ytoken():
-        
-        '''get new yandex token'''
-
-        with yadisk.Client(client_id, client_secret) as client:
-            url = client.get_code_url()
-
-            print(f"Go to the following url: {url}")
-            code = input("Enter the confirmation code: ")
-
-            try:
-                response = client.get_token(code)
-            except yadisk.exceptions.BadRequestError:
-                print("Bad code")
-                return
-            
-            client.token = response.access_token
-            token_yandex=client.token
-            print(client.token)
-            if client.check_token():
-
-                print("Sucessfully received token!")
-            else:
-                print("Something went wrong. Not sure how though...")
-
 
 def start():
+            '''the function that starts transcription'''
+
+            #init 
             global client # LATER DO SOMETHING ABOUT IT!
             global vad_pipeline #LATER DO SOMETHING ABOUT IT!
+            #because main audio was defined below func, it thinks it is local only, so i did this, now it will use global var
+            participants = PARTICIPANTS
+            main_audio = MAIN_AUDIO
 
-            main_audio_restore= main_audio
+            main_audio_restore = main_audio
             speaker_model=None 
             junk = []
-            junk.append(TEMP_FOLDER_MAIN, TEMP_FOLDER_FRAGMENTS, CLIPPED_SEGMENTS) #for now only this
+            junk.extend([TEMP_FOLDER_MAIN, TEMP_FOLDER_FRAGMENTS, CLIPPED_SEGMENTS]) #for now only this
 
             #используем яндекс диск
             if mode=='yandex':
@@ -95,16 +76,18 @@ def start():
             logger.info(main_audio, 'MAIN AUDIO FILE"S PATH')
 
             #folders / files , sample folders here
-            folders_manager = FolderTree(main_folder, 'yandex', participants, ATTEMPTS, ATTEMPTS_INTERVAL, client)
+            folders_manager = FolderTree(main_folder, participants, ATTEMPTS, ATTEMPTS_INTERVAL, client)
 
             participant_folder_paths , participants = folders_manager.process_subfolders()
+
+            # os.makedirs('content',exist_ok=True) #CORRECT IT !
 
             ###FRAGEMENTS HERE
             fragments = fragment(interval, main_audio , divide_interval, TEMP_FOLDER_MAIN, TEMP_FOLDER_FRAGMENTS )
             logger.info(participant_folder_paths, 'participant_folder_paths')
 
             #HERE VECTORS AND AUDIO DATA
-            sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, mode, client, ATTEMPTS, ATTEMPTS_INTERVAL)
+            sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, client, ATTEMPTS, ATTEMPTS_INTERVAL)
             logger.info(sample_vectors, 'sample_vectors', sample_audios, 'sample_audios')
 
             # Remove participants who don't have any audio samples
@@ -121,25 +104,26 @@ def start():
             participants = participants_with_samples
             folders = folders_with_samples
 
+            #we lose here !
             logger.info('participants_with_samples', participants_with_samples, folders_with_samples, ' folders_with_samples')
             #zdes u nas iz sample_vectors, sample_audios est participants bez audio
-            sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, mode, client, ATTEMPTS, ATTEMPTS_INTERVAL)
+            sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, client, ATTEMPTS, ATTEMPTS_INTERVAL)
             
             logger.info('POSLE UDALENIYA BEZ AUDIO PARTICIPANTS:',sample_vectors, 'sample_vectors', sample_audios, 'sample_audios')
             # A LOT OF AUDIPROCESSING PREPARATIONS HERE
             audio_models_loading = AudioProcessor(language, modeltype, embedding_model_name, HUGGINGFACE_TOKEN, Accuracy_boost, Silence )
-            embedding_model= AudioProcessor.embedding_model
-            embedding_model_dimension = AudioProcessor.embedding_model_dimension
-            model= AudioProcessor.model
+            embedding_model= audio_models_loading.embedding_model
+            embedding_model_dimension = audio_models_loading.embedding_model_dimension
+            model= audio_models_loading.model
             vad_pipeline=None 
             pipeline=None
             embedding_models_group1 = audio_models_loading.embedding_models_group1
 
             if Silence:         
-                  vad_pipeline= AudioProcessor.vad_pipeline
+                  vad_pipeline= audio_models_loading.vad_pipeline
 
             if Accuracy_boost:
-                  pipeline= AudioProcessor.diarization_pipeline
+                  pipeline= audio_models_loading.diarization_pipeline
 
             if save_txt:
                   file_path = f"Определение голосов расшифровки Whisper - {main_audio_restore}.txt"
@@ -151,7 +135,7 @@ def start():
             duration = get_duration('audio.wav')
             segments = result["segments"]
             sep_model = SepformerSeparation.from_hparams( "speechbrain/sepformer-whamr16k" )
-            overlap_timestamps = AudioProcessor.remove_overlap()
+            overlap_timestamps = audio_models_loading.remove_overlap(main_audio)
 
             # deleting old segments and replacing them with new segments HERE
             segments = replace_overlaps(segments, sep_model, model, overlap_timestamps)
@@ -178,8 +162,9 @@ def start():
             distances = pairwise_distances(embeddings, metric='cosine')  # or use any other metric
             distances = distances[np.triu_indices_from(distances, k=1)]
 
-            if DISTANCE_THRESHOLD==None:
-                    DISTANCE_THRESHOLD = np.mean(distances) +  np.std(distances)/2
+            distance_threshold = settings['distance_threshold']
+            if distance_threshold==None:
+                    distance_threshold = np.mean(distances) +  np.std(distances)/2
 
             #CLUSTERING BLOCK
             clustering_manager = ClusteringModel(settings)
@@ -215,7 +200,8 @@ def start():
             #junk object should be in constant and used in all files
             remove_junk(junk)
               
-# start()
+if __name__ == '__main__':
+      start()
 
 
 

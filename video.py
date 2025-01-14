@@ -10,8 +10,7 @@ def extract_segment(main_audio, start, end, output_path):
                 end: float (seconds)
                 output_path: str
                 """
-
-                duration = main_audio - end
+                duration = end - start
 
                 # Construct the FFmpeg command
                 command = [
@@ -44,7 +43,7 @@ def get_duration(file_path):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
-
+        
         duration = float(result.stdout)
         return duration
 
@@ -86,21 +85,30 @@ def parse_time_range(text:str, audio_path:str)-> tuple[int,int]:
              
         return start_time, end_time
 
-def get_timestamps_from_audio(audio_path, divide_interval):
-        
-        '''get timestamps from your audio'''
+def get_timestamps_from_audio(audio_path: str, divide_interval: int) -> list[tuple[int, int]]:  
+        """
+        Generate timestamps from an audio file, dividing it into intervals.
 
-      
+        Args:
+            audio_path (str): Path to the audio file.
+            divide_interval (int): Duration of each interval in seconds.
+
+        Returns:
+            list[tuple[int, int]]: A list of (start, end) timestamps for each interval.
+        """
         audio_duration = get_duration (audio_path)
         timestamps=[]
         start_sec=0
+
         while start_sec<audio_duration:
-                timestamps.append((start_sec, start_sec+divide_interval))
+                end = min (start_sec+divide_interval, audio_duration)
+                timestamps.append((start_sec, end))
                 start_sec+=divide_interval
 
         #хватаем хвостик аудио
-        if start_sec >= audio_duration:
-            timestamps.append((start_sec-divide_interval, audio_duration/60))
+        if timestamps[-1][-1]!=audio_duration:
+            timestamps.append((start_sec-divide_interval, audio_duration))
+
         return timestamps
 
 

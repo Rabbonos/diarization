@@ -21,6 +21,7 @@ import wave
 import json
 from typing import Dict
 import torchaudio
+from yandex import load_audio_from_yandex
 
 def read_json(json_path):
             with open(json_path, 'r', encoding='utf-8') as f:
@@ -60,15 +61,12 @@ def download_from_gdrive(drive_url, output_path):
 ##########################################
 #settings {source} : None / yandex / google / other url ---> 
 #link = file_disk_url
-def download_audio(source: str, link: str, download_path: str = None) -> str:
+def download_audio(source: str, link: str, download_path: str = 'main_audio.wav') -> str:
         '''
         Downloads audio
         source: str, tells where we got link from , values: [None / yandex / google / other url]
         download_path :str, path where audio is loaded
         '''
-        if download_path==None:
-               download_path = 'main_audio.wav'
-
         if source == None:
                 return
         
@@ -79,6 +77,7 @@ def download_audio(source: str, link: str, download_path: str = None) -> str:
                 response = requests.get(final_url)
                 download_url = response.json()['href']
                 # download & save
+            
                 download_response = requests.get(download_url)
                 with open(download_path, 'wb') as f: 
                     f.write(download_response.content)
@@ -86,7 +85,6 @@ def download_audio(source: str, link: str, download_path: str = None) -> str:
                 return os.path.abspath(download_path)
         
         elif source =='google':
-                
                 download_from_gdrive(link , download_path)
                 return os.path.abspath(download_path)
         else:
@@ -101,7 +99,7 @@ def recreate_folder(path: str) -> None:
 
 
 #разделение полученных сегментов на более мелкие части (подсегменты)
-def fragment(interval: str, main_audio: str, divide_interval: int, temp_folder_main: str, temp_folder_fragments: str) -> List[Tuple[str, int, int]] :
+def fragment(interval: str, main_audio: str, divide_interval: int, temp_folder_main: str, temp_folder_fragments: str) -> List[Tuple] :
         
         """
         Splits audio into smaller segments and subsegments.
@@ -119,28 +117,33 @@ def fragment(interval: str, main_audio: str, divide_interval: int, temp_folder_m
                 
         #создание первичных отрезков заданных пользователем
 
+        #making folder to store audio
+        recreate_folder(temp_folder_main)
+        recreate_folder(temp_folder_fragments)
+
         files_paths = []
         
         #parsing intervals
         # timestamps_text=[]
         # for interval in intervals:
+       
         timestamps_text = (parse_time_range(interval, main_audio))
 
-        #making folder to store audio
-        recreate_folder(temp_folder_main)
-        recreate_folder(temp_folder_fragments)
-
         #extracting audio
-        for start, end in timestamps_text:
-
-            temp_file_name = temp_folder_main+f"/segment{start}_{end}.mp4"
-
-            print(temp_file_name)
+        #for start, end in timestamps_text:
             
-            extract_segment(main_audio, start, end, output_path=temp_file_name)
+        start = timestamps_text[0]
+        end= timestamps_text[1]
+        
+        temp_file_name = temp_folder_main+f"/segment{start}_{end}.mp4"
 
-            temp_audio_path = [temp_file_name, start, end]
-            files_paths.append(temp_audio_path)
+        print(temp_file_name)
+        #check out why audio is 60.04 not 60 in length
+        # BUG:EXTRACT SEGMENT AND GET_DURATION SHOW DIFFERENCE, EXTRACT_SEGMENT:60S, GET_DURATION:60.04 S!
+        extract_segment(main_audio, start, end, temp_file_name)
+
+        temp_audio_path = [temp_file_name, start, end]
+        files_paths.append(temp_audio_path)
 
         #обработка сегментов
 
@@ -322,7 +325,7 @@ class AudioProcessor:
             return embedding_model, embedding_model_dimension
         
 
-        def remove_overlap(self):
+        def remove_overlap(self,main_audio):
             """
             Processes overlapping speech segments and extracts timestamps and audio clips.
             """
@@ -487,29 +490,6 @@ def main_audio_preprocessing(model:Callable, wav_path:str, is_fragment:str ,main
 
                               return result
                           
-
-def load_audio_from_yandex(sample_path:str , client:Callable, output_path:str = 'sample_audio.wav' , ATTEMTPS:int=3, ATTEMPTS_INTERVAL:int=3):
-        """
-        Downloads audio from Yandex and saves it locally.
-
-        Args:
-            sample_path (str): Path to the audio file on Yandex.
-            client (Callable): Client for downloading the audio.
-            output_path (str): Local path to save the downloaded audio.
-            ATTEMTPS (int): Number of retries for downloading.
-            ATTEMPTS_INTERVAL (int): Interval between retries in seconds.
-
-        Raises:
-            RuntimeError: If downloading fails.
-        """
-        if client:
-            try:
-                client.download(sample_path, output_path, n_retries = ATTEMTPS  , retry_interval =ATTEMPTS_INTERVAL)
-            except Exception as e:
-                raise RuntimeError(f"During downloading audio from yandex an exception happened {str(e)}")
-            
-
-
 def get_sample_embeddings(sample_audios: List, 
         sample_vectors: List, 
         embedding_model: Callable, 
@@ -567,8 +547,8 @@ def get_sample_embeddings(sample_audios: List,
         
 
 def replace_overlaps(segments:List[Dict], sep_model:Callable, model:Callable, overlap_timestamps:List[List[float]], 
-                     clipped_segments_dir: str = "/content/clipped_segments",
-                     output_dir: str = "/content/voices_split" )->List[Dict]:
+                     clipped_segments_dir: str = "./clipped_segments",
+                     output_dir: str = "./voices_split" )->List[Dict]:
             """
             Replaces overlapping audio segments with new transcribed segments of separated voices.
 
@@ -592,8 +572,8 @@ def replace_overlaps(segments:List[Dict], sep_model:Callable, model:Callable, ov
                         new_segments = []                      
                         # Process the separated waveforms
                         for i in range(length):
-                            torchaudio.save(f"/{output_dir}/separated_voice.wav", output_waveforms[:, :, i].detach().cpu(), 16000)
-                            transcribed_segments = model.transcribe(f"{output_dir}/separated_voice.wav")["segments"]
+                            torchaudio.save(f"./{output_dir}/separated_voice.wav", output_waveforms[:, :, i].detach().cpu(), 16000)
+                            transcribed_segments = model.transcribe(f"./{output_dir}/separated_voice.wav")["segments"]
                             #Add timestamp (otherwise it will start from 00:00:00 each time)
                             for segment in transcribed_segments:
                                 segment['start'] = timestamp[0]
@@ -607,7 +587,7 @@ def replace_overlaps(segments:List[Dict], sep_model:Callable, model:Callable, ov
 
           
 
-def use_vectors(sample_vectors:List[List[str, str, str]], client=None, ATTEMPTS= 3, ATTEMPTS_INTERVAL=3, output_path:str = "downloaded.json" )-> List[List[np.ndarray, str]]:
+def use_vectors(sample_vectors:List[List], client=None, ATTEMPTS= 3, ATTEMPTS_INTERVAL=3, output_path:str = "downloaded.json" )-> List[List]:
             '''Using vectorised samples instead of sample audios
             
                 Args:

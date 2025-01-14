@@ -27,14 +27,14 @@ class FolderTree():
             list: List of subfolder paths.
 
         '''
-        def __init__(self, folder_path:str, participants:List[str], ATTEMPTS , ATTEMPTS_INTERVAL,  client=None, ):
+        def __init__(self, folder_path:str, participants:List[str], ATTEMPTS=3, ATTEMPTS_INTERVAL= 3,  client=None, ):
             """initializes folders and subfolders"""
-            self.folder_path = folder_path
-            self.subfolders = self._get_subfolders ()
             self.client = client
+            self.folder_path = folder_path
             self.participants = participants
             self.ATTEMPTS = ATTEMPTS
             self.ATTEMPTS_INTERVAL = ATTEMPTS_INTERVAL 
+            self.subfolders = self._get_subfolders ()
 
         def _get_subfolders(self):
                """gets list of subfolders based on the client"""
@@ -116,7 +116,7 @@ def fetch_vectors_and_audio_files(participant_folder_paths:List[str], participan
                     - sample_vectors: List of [file_path, participant_name, folder_path] for vector files.
                     - sample_audios: List of [file_path, participant_name, folder_path] for audio files.
             """
-            def listing_files(folder:str, client:Callable=None, ATTEMPTS=None, ATTEMPTS_INTERVAL= None)->list:
+            def listing_files(folder:str, client:Callable=None, ATTEMPTS=3, ATTEMPTS_INTERVAL= 3)->list:
                    """Lists files in the folder based on the specified mode."""
                    if client:
                           with client:
@@ -124,7 +124,7 @@ def fetch_vectors_and_audio_files(participant_folder_paths:List[str], participan
                    else:
                           return os.listdir(folder)     
                               
-            def create_vector_file(empty_json_path:str,  client:Callable=None, ATTEMPTS=None, ATTEMPTS_INTERVAL= None):
+            def create_vector_file(empty_json_path:str,  client:Callable=None, ATTEMPTS=3, ATTEMPTS_INTERVAL= 3):
                     """Creates an empty JSON file for a participant if none exists."""
                     if client:
                          with client:
@@ -133,11 +133,11 @@ def fetch_vectors_and_audio_files(participant_folder_paths:List[str], participan
                             with open(empty_json_path, 'w') as f:
                                             json.dump({}, f)
 
-            def check_file_type(folder, file, client:Callable=None) -> bool:
+            def check_file_type(folder, file, meta, client:Callable=None) -> bool:
                    """Checks if a file is valid (not a directory)."""
                    try:
                         if client:
-                            return file.get('type') != 'dir'
+                            return meta['type'] != 'dir'
                         return os.path.isfile(os.path.join(folder, file))
                    except KeyError as e:
                         raise KeyError(f"Unexpected error: {e}")
@@ -159,8 +159,9 @@ def fetch_vectors_and_audio_files(participant_folder_paths:List[str], participan
             for folder,name in zip(participant_folder_paths, participants):
                             files = listing_files(folder, client, ATTEMPTS, ATTEMPTS_INTERVAL )
                             for file in files:
+                                meta=file
                                 file= file['path'] if client!=None else os.path.join(folder, file) 
-                                if not file.endswith('.json') and  check_file_type(folder, file): 
+                                if not file.endswith('.json') and  check_file_type(folder, file, meta, client): 
                                     sample_audios.append([file, name, folder])
 
             return (sample_vectors, sample_audios)

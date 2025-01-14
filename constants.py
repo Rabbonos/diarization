@@ -1,5 +1,5 @@
-#mode, can be :'local','google drive','yandex disk' 
-mode='local'
+#mode, can be :'local','google colab - drive','yandex' 
+mode='yandex'
 
 # Язык Whisper
 language='Russian'
@@ -7,27 +7,23 @@ language='Russian'
 # Размер модели whisper (tiny, base, small, medium, turbo, large)
 modeltype='medium'
 
+#main folder with participant audios
 # Главная папка: для Яндекс.Диск '/diarization_project/' , для Google Диск '/content/drive/My Drive/diarization_project/'
-main_folder = r'/diarization_project/'
+main_folder = r'/diarization_project/Образцы голоса'
 
-
-TEMP_FOLDER_MAIN = "/content/main_audio"
-TEMP_FOLDER_FRAGMENTS = "/content/fragmented_main"
-CLIPPED_SEGMENTS = "/content/clipped_segments"
-##############################
+TEMP_FOLDER_MAIN = "main_audio"
+TEMP_FOLDER_FRAGMENTS = "fragmented_main"
+CLIPPED_SEGMENTS = "clipped_segments"
 
 # Наименование главного файла в главной/корневой папке (если не скачивать с Яндекс.Диск или Google Диск)
-main_audio =r'1_Репортаж(малый).mp4'
+MAIN_AUDIO =r'https://disk.yandex.ru/i/uZ05epTJKC3E_g'#r'/diarization_project/1_Репортаж(малый).mp4'
 
 #None / yandex / google / other url, откуда скачиваем файл (если скачиваем)
 source = 'yandex'
 
-################################
-
-
 # Участники ,  указываем название ФИО участников (в google drive назовите папки с образцами ФИО участниками)
 # ['Куертов Влад (предприниматель)', 'Редькин Николай (ведущий)', 'Трунов Василий (ведущий)']
-participants =['Соколов Алексей', 'Гафарова Лилия']
+PARTICIPANTS =['Соколов Алексей', 'Гафарова Лилия']
 
 # Интервал для расшифровки
 #intervals =  [ "|00:00:00-00:01:00|" , "00:01:30-end"] #for not like this
@@ -46,7 +42,7 @@ Accuracy_boost=True
 
 # huggingface token для модели (иногда нужен)
  #userdata.get('huggingface_token')
-HUGGINGFACE_TOKEN='...'
+HUGGINGFACE_TOKEN='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'
 
 # Модели эмдеддингов / векторов
 #варианты: 'pyannote/embedding', 'speechbrain/spkrec-ecapa-voxceleb', 'nvidia/speakerverification_en_titanet_large', 'hbredin/wespeaker-voxceleb-resnet34-LM' , 'titanet_large' , 'ecapa_tdnn' , 'speakerverification_speakernet'
@@ -121,11 +117,11 @@ remove_overlap =True
 ##################################################### Настройки 3 (технические) #####################################################
 
 # Настройка приложения Яндекс для подключения к Яндекс.Диск
-client_secret="..."
-client_id= "..."
+client_secret="1662041a5a3346f78b333d25dd9ee2ee"
+client_id= "33ae9428aa2c4d4ba7d5e84838260ec0"
 
 # Получить новый токен Яндекс для управления Яндекс.Диск?
 get_token='нет' #'да'
-token_yandex= '...' #сюда вставляете новый токен
+token_yandex= 'y0_AgAAAAAIK3i8AAyjygAAAAEVPRxRAABauhYSjdRHNZdlk3xmC-p9PQJtQA' #сюда вставляете новый токен
 
 ##################################################### Конец настроек #####################################################
