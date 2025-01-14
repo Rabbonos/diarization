@@ -42,7 +42,7 @@ Accuracy_boost=True
 
 # huggingface token для модели (иногда нужен)
  #userdata.get('huggingface_token')
-HUGGINGFACE_TOKEN='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'
+HUGGINGFACE_TOKEN='...'
 
 # Модели эмдеддингов / векторов
 #варианты: 'pyannote/embedding', 'speechbrain/spkrec-ecapa-voxceleb', 'nvidia/speakerverification_en_titanet_large', 'hbredin/wespeaker-voxceleb-resnet34-LM' , 'titanet_large' , 'ecapa_tdnn' , 'speakerverification_speakernet'
@@ -117,11 +117,11 @@ remove_overlap =True
 ##################################################### Настройки 3 (технические) #####################################################
 
 # Настройка приложения Яндекс для подключения к Яндекс.Диск
-client_secret="1662041a5a3346f78b333d25dd9ee2ee"
-client_id= "33ae9428aa2c4d4ba7d5e84838260ec0"
+client_secret="..."
+client_id= "..."
 
 # Получить новый токен Яндекс для управления Яндекс.Диск?
 get_token='нет' #'да'
-token_yandex= 'y0_AgAAAAAIK3i8AAyjygAAAAEVPRxRAABauhYSjdRHNZdlk3xmC-p9PQJtQA' #сюда вставляете новый токен
+token_yandex= '...' #сюда вставляете новый токен
 
 ##################################################### Конец настроек #####################################################
