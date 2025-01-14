@@ -47,5 +47,4 @@ def parse_time_range(text:str, audio_len:int)-> tuple[int,int]:
 #pip (poetry add) install python-docx
 
 
-    
 # write_to_word('hi\n my name is Ali\n And your?', r'C:\Users\Ali\Desktop\newword.docx')

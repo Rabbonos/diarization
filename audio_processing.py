@@ -4,11 +4,11 @@ import os
 from urllib.parse import urlencode #yandex disk
 import requests
 import shutil
-from video import get_timestamps_from_audio, parse_time_range, extract_segment, get_duration
+from video import get_timestamps_from_audio, parse_time_range, extract_segment, get_duration, standardize_audio
 from typing import List, Optional, Tuple, Callable
 from constants import *
 import torch
-from pyannote.audio import Audio, Pipeline, Model, Inference
+from pyannote.audio import Audio, Pipeline #, Model, Inference
 import soundfile as sf
 import whisper
 import subprocess
@@ -286,6 +286,12 @@ class AudioProcessor:
                                                                   use_auth_token=HUGGINGFACE_TOKEN)
 
             elif self.embedding_model_name in self.embedding_models_group2:
+                    try:
+                        import nemo.collections.asr as nemo_asr
+                    except ImportError as e:
+                        raise ImportError(
+                            "Nemo is required for this feature. Install it using: pip install ...[nemo]."
+                        ) from e
                     #модель эмбеддингов группы 2 (выбор : 'titanet_large' , 'ecapa_tdnn' , 'speakerverification_speakernet') , embedding_model_dimension = X (искать в интернете/chatgpt)  , для titanet_large embedding_model_dimension=192 , для speakerverification_speakernet - 256 ...
                     speaker_model = nemo_asr.models.EncDecSpeakerLabelModel.from_pretrained(model_name=self.embedding_model_name)
                     speaker_model = speaker_model.to(self.device)
@@ -422,21 +428,7 @@ def boost_accuracy(pipeline:Callable, wav_path:str, result:dict)->List[dict]:
         except Exception as e:
             raise RuntimeError(f"Error during accuracy boosting: {e}")
             
-def standardize_audio(audio_path, output_path):
-        """
-        Converts audio to a standard WAV format.
 
-        Args:
-            audio_path (str): Input audio file path.
-            output_path (str): Output WAV file path.
-        """
-        try:
-            subprocess.call([
-                'ffmpeg', '-i', audio_path, '-ar', '16000', '-ac', '1',
-                '-sample_fmt', 's16', '-frame_size', '400', '-y', output_path
-            ])
-        except Exception as e:
-            print(f"Error during audio standardization: {e}")
 
 #redundancy with is_fragment, because I will anyway need fragments then
 def main_audio_preprocessing(model:Callable, wav_path:str, is_fragment:str ,main_audio:str=None, fragments:List[List]=None, Silence:bool=False , Accuracy_boost:bool=False, vad_pipeline:Optional[Callable]=None, pipeline: Optional[Callable]=None)->dict:

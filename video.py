@@ -1,6 +1,5 @@
 import subprocess
 import re
-from typing import List, Union
 
 def extract_segment(main_audio, start, end, output_path):
                 """
@@ -103,3 +102,20 @@ def get_timestamps_from_audio(audio_path, divide_interval):
         if start_sec >= audio_duration:
             timestamps.append((start_sec-divide_interval, audio_duration/60))
         return timestamps
+
+
+def standardize_audio(audio_path, output_path):
+        """
+        Converts audio to a standard WAV format.
+
+        Args:
+            audio_path (str): Input audio file path.
+            output_path (str): Output WAV file path.
+        """
+        try:
+            subprocess.call([
+                'ffmpeg', '-i', audio_path, '-ar', '16000', '-ac', '1',
+                '-sample_fmt', 's16', '-frame_size', '400', '-y', output_path
+            ])
+        except Exception as e:
+            print(f"Error during audio standardization: {e}")
