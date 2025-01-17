@@ -15,7 +15,7 @@ TEMP_FOLDER_MAIN = "main_audio"
 TEMP_FOLDER_FRAGMENTS = "fragmented_main"
 CLIPPED_SEGMENTS = "clipped_segments"
 
-# Наименование главного файла в главной/корневой папке (если не скачивать с Яндекс.Диск или Google Диск)
+# path главного файла в главной/корневой папке (если не скачивать с Яндекс.Диск или Google Диск)
 MAIN_AUDIO =r'https://disk.yandex.ru/i/uZ05epTJKC3E_g'#r'/diarization_project/1_Репортаж(малый).mp4'
 
 #None / yandex / google / other url, откуда скачиваем файл (если скачиваем)
@@ -42,7 +42,7 @@ Accuracy_boost=True
 
 # huggingface token для модели (иногда нужен)
  #userdata.get('huggingface_token')
-HUGGINGFACE_TOKEN='...'
+HUGGINGFACE_TOKEN='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'
 
 # Модели эмдеддингов / векторов
 #варианты: 'pyannote/embedding', 'speechbrain/spkrec-ecapa-voxceleb', 'nvidia/speakerverification_en_titanet_large', 'hbredin/wespeaker-voxceleb-resnet34-LM' , 'titanet_large' , 'ecapa_tdnn' , 'speakerverification_speakernet'
@@ -57,11 +57,8 @@ Vector= True
 # После обработки образцов голосов добавить их как вектора в json ? (1 json файл будет хранить все вектора и названия фрагментов векторов рядом)
 Add=False
 
-# Выводить текст или нет
-save_txt=True
-
 #text/word/none
-save_mode = 'text'
+save_mode = 'word'
 
 # Выводить метки или нет
 metki=True
@@ -117,11 +114,11 @@ remove_overlap =True
 ##################################################### Настройки 3 (технические) #####################################################
 
 # Настройка приложения Яндекс для подключения к Яндекс.Диск
-client_secret="..."
-client_id= "..."
+client_secret="1662041a5a3346f78b333d25dd9ee2ee"
+client_id= "33ae9428aa2c4d4ba7d5e84838260ec0"
 
 # Получить новый токен Яндекс для управления Яндекс.Диск?
 get_token='нет' #'да'
-token_yandex= '...' #сюда вставляете новый токен
+token_yandex= 'y0_AgAAAAAIK3i8AAyjygAAAAEVPRxRAABauhYSjdRHNZdlk3xmC-p9PQJtQA' #сюда вставляете новый токен
 
 ##################################################### Конец настроек #####################################################

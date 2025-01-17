@@ -49,14 +49,15 @@ def start():
             #init 
             global client # LATER DO SOMETHING ABOUT IT!
             global vad_pipeline #LATER DO SOMETHING ABOUT IT!
+            global settings #LATER DO SOMETHING ABOUT IT!
             #because main audio was defined below func, it thinks it is local only, so i did this, now it will use global var
             participants = PARTICIPANTS
             main_audio = MAIN_AUDIO
 
             main_audio_restore = main_audio
             speaker_model=None 
-            junk = []
-            junk.extend([TEMP_FOLDER_MAIN, TEMP_FOLDER_FRAGMENTS, CLIPPED_SEGMENTS]) #for now only this
+            junk_list = []
+            junk_list.extend([TEMP_FOLDER_MAIN, TEMP_FOLDER_FRAGMENTS, CLIPPED_SEGMENTS]) #for now only this
 
             #используем яндекс диск
             if mode=='yandex':
@@ -126,7 +127,8 @@ def start():
                   pipeline= audio_models_loading.diarization_pipeline
 
             if save_txt:
-                  file_path = f"Определение голосов расшифровки Whisper - {main_audio_restore}.txt"
+                  main_audio_file_name = main_audio_restore.split('/')[-1].split('.')[0]
+                  file_path = f"Transcription_{main_audio_file_name}.txt"
             else:
                   file_path=None
  
@@ -135,7 +137,7 @@ def start():
             duration = get_duration('audio.wav')
             segments = result["segments"]
             sep_model = SepformerSeparation.from_hparams( "speechbrain/sepformer-whamr16k" )
-            overlap_timestamps = audio_models_loading.remove_overlap(main_audio)
+            overlap_timestamps = audio_models_loading.remove_overlap('audio.wav')
 
             # deleting old segments and replacing them with new segments HERE
             segments = replace_overlaps(segments, sep_model, model, overlap_timestamps)
@@ -163,8 +165,10 @@ def start():
             distances = distances[np.triu_indices_from(distances, k=1)]
 
             distance_threshold = settings['distance_threshold']
+
             if distance_threshold==None:
                     distance_threshold = np.mean(distances) +  np.std(distances)/2
+                    settings['distance_threshold'] = distance_threshold
 
             #CLUSTERING BLOCK
             clustering_manager = ClusteringModel(settings)
@@ -198,7 +202,8 @@ def start():
                     print(f'For unknown reasons transcription could not be printed, {str(e)}')
                     
             #junk object should be in constant and used in all files
-            remove_junk(junk)
+            for junk in junk_list:
+                    remove_junk(junk)
               
 if __name__ == '__main__':
       start()

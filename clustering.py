@@ -148,6 +148,9 @@ class ClusteringModel:
             """
             distance_threshold = self.settings.get('distance_threshold', None)
             n_clusters = self.settings.get('n_clusters', None)
+            if (n_clusters ==None and distance_threshold == None ) or (n_clusters !=None and distance_threshold != None ):
+                 raise ValueError("Exactly one of n_clusters and distance_threshold has to be set, and the other needs to be None.")
+            
             clustering = AgglomerativeClustering(n_clusters=n_clusters, distance_threshold=distance_threshold,
                                                             metric=self.settings['affinity'], linkage=self.settings['linkage'])
 
