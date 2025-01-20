@@ -67,7 +67,7 @@ class Diarizator:
 if __name__ == '__main__':
 
       diarizator = Diarizator('settings.yaml')
-      # diarizator.transcribe()
+      diarizator.transcribe()
       #diarizator.sample()
-      diarizator.upgrade_vectors()
+      #diarizator.upgrade_vectors()
 

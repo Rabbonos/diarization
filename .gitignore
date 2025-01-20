@@ -7,3 +7,10 @@
 # Ignore specific directories
 voices_split/
 main_audio/
+
+main_audio.wav
+sample_sample.wav
+sample_voice.wav
+output_file.wav
+main_wav.wav
+audio.wav

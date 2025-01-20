@@ -86,7 +86,6 @@ def start(settings: Settings):
             model= audio_models_loading.model
             vad_pipeline=None 
             pipeline=None
-            embedding_models_group1 = audio_models_loading.embedding_models_group1
 
             if settings.Silence:         
                   vad_pipeline= audio_models_loading.vad_pipeline
