@@ -27,7 +27,7 @@ class ClusteringModel:
      
      def __init__(self, settings):
           self.settings = settings
-          self.algorithm = self.settings.get('clustering_algorithm')
+          self.algorithm = self.settings.clustering_algorithm
           self.validate_settings()
          
           # Mapping of algorithms to methods
@@ -54,18 +54,19 @@ class ClusteringModel:
 
           if isinstance(parameters, list):               
                 for parameter in parameters:
-                        if self.settings.get(parameter) is None: 
+                        if getattr(self.settings, parameter) is None:
                             raise ValueError(
                                             f"{parameter} must be defined for {self.algorithm}"
                                         )
           else:
                 for parameter in parameters:
-                        if self.settings.get(parameter) is None: 
+                        if getattr(self.settings, parameter) is None:
                             raise KeyError(
                                             f"{parameter} must be defined for {self.algorithm}"
                                         )
                         else: 
-                             if self.settings.get(parameter) < parameters[parameter]:
+                             
+                             if getattr(self.settings, parameter)  < parameters[parameter]:
                                 raise ValueError(
                                             f"{parameter} must be bigger than {parameters[parameter]}"
                                         )
@@ -99,12 +100,12 @@ class ClusteringModel:
             np.ndarray
                 Cluster labels for each embedding.
             """
-
-            n_clusters = self.settings.get('n_clusters')
-            min_speakers = self.settings.get('min_speakers')
-            max_speakers = self.settings.get('max_speakers')
-            n_init = self.settings.get('n_init', 10)
-            random_state = self.settings.get('random_state', None)
+            
+            n_clusters = self.settings.n_clusters 
+            min_speakers = self.settings.min_speakers 
+            max_speakers = self.settings.max_speakers 
+            n_init = self.settings.n_init 
+            random_state = self.settings.random_state 
 
             if n_clusters is None:
                     if min_speakers is None or max_speakers is None:
@@ -146,13 +147,14 @@ class ClusteringModel:
             np.ndarray
                 Cluster labels for each embedding.
             """
-            distance_threshold = self.settings.get('distance_threshold', None)
-            n_clusters = self.settings.get('n_clusters', None)
+            
+            distance_threshold = self.settings.distance_threshold 
+            n_clusters = self.settings.n_clusters 
             if (n_clusters ==None and distance_threshold == None ) or (n_clusters !=None and distance_threshold != None ):
                  raise ValueError("Exactly one of n_clusters and distance_threshold has to be set, and the other needs to be None.")
             
             clustering = AgglomerativeClustering(n_clusters=n_clusters, distance_threshold=distance_threshold,
-                                                            metric=self.settings['affinity'], linkage=self.settings['linkage'])
+                                                            metric=self.settings.affinity , linkage=self.settings.linkage )
 
             cluster_labels = clustering.fit_predict(embeddings)
 
@@ -170,7 +172,7 @@ class ClusteringModel:
                 Cluster labels for each embedding.
             """
 
-            clustering = DBSCAN(eps=self.settings['eps'], min_samples=self.settings['min_samples'], metric=self.settings['affinity'])
+            clustering = DBSCAN(eps=self.settings.eps , min_samples=self.settings.min_samples , metric=self.settings.affinity )
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels
@@ -186,15 +188,15 @@ class ClusteringModel:
             np.ndarray
                 Cluster labels for each embedding.
             """
-            n_clusters = self.settings.get('n_clusters', None)
+            n_clusters = self.settings.n_clusters 
 
-            cluster_range = range(self.settings['min_speakers'], self.settings['max_speakers'])
+            cluster_range = range(self.settings.min_speakers , self.settings.max_speakers )
 
             best_n_clusters, best_bic = None, np.inf
 
             if n_clusters == None:
                 for n_clusters in cluster_range:
-                    gmm = GaussianMixture(n_components=n_clusters, random_state=self.settings['random_state'])
+                    gmm = GaussianMixture(n_components=n_clusters, random_state=self.settings.random_state )
                     gmm.fit(embeddings)
                     bic = gmm.bic(embeddings)
                     print(f'GaussianMixture - Количество кластеров: {n_clusters}, BIC: {bic}')
@@ -202,9 +204,9 @@ class ClusteringModel:
                         best_bic, best_n_clusters = bic, n_clusters         
             else:
                  warnings.warn('"n_clusters" is not specified. "min_speakers" and "max_speakers" will be ignored.',UserWarning)
-                 best_n_clusters=self.settings['n_clusters']
+                 best_n_clusters=self.settings.n_clusters 
 
-            clustering = GaussianMixture(n_components=best_n_clusters, random_state=self.settings['random_state'])
+            clustering = GaussianMixture(n_components=best_n_clusters, random_state=self.settings.random_state )
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels
@@ -221,7 +223,7 @@ class ClusteringModel:
                 Cluster labels for each embedding.
             """
 
-            clustering = MeanShift(bandwidth=self.settings['bandwidth'])
+            clustering = MeanShift(bandwidth=self.settings.bandwidth )
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels
@@ -238,7 +240,7 @@ class ClusteringModel:
                 Cluster labels for each embedding.
             """
 
-            clustering = AffinityPropagation(damping=self.settings['damping'])
+            clustering = AffinityPropagation(damping=self.settings.damping )
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels
@@ -255,14 +257,14 @@ class ClusteringModel:
             np.ndarray
                 Cluster labels for each embedding.
             """
-            n_clusters = self.settings.get('n_clusters', None)
+            n_clusters = self.settings.n_clusters 
 
-            cluster_range = range(self.settings['min_speakers'], self.settings['max_speakers'])
+            cluster_range = range(self.settings.min_speakers , self.settings.max_speakers )
             best_n_clusters, best_score = None, -1
 
             if n_clusters==None:
                 for n_clusters in cluster_range:
-                    clustering = SpectralClustering(n_clusters=n_clusters, affinity=self.settings['affinity'])
+                    clustering = SpectralClustering(n_clusters=n_clusters, affinity=self.settings.affinity )
                     cluster_labels = clustering.fit_predict(embeddings)
                     score = silhouette_score(embeddings, cluster_labels)
                     print(f'SpectralClustering - Количество кластеров: {n_clusters}, Silhouette Score: {score}')
@@ -271,7 +273,7 @@ class ClusteringModel:
             else:
                  best_n_clusters=n_clusters
 
-            clustering = SpectralClustering(n_clusters=best_n_clusters, affinity=self.settings['affinity'])
+            clustering = SpectralClustering(n_clusters=best_n_clusters, affinity=self.settings.affinity )
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels
@@ -288,18 +290,18 @@ class ClusteringModel:
                 Cluster labels for each embedding.
             """
 
-            n_clusters=self.settings.get('n_clusters',None) 
+            n_clusters=self.settings.n_clusters 
 
             if n_clusters is None:
                 warnings.warn('"n_clusters" is not specified. "max_speakers" will be set as a default.'
                                 , UserWarning)
                 
                 try:
-                     n_clusters = self.settings['max_speakers']  # Установите значение n_clusters по умолчанию
+                     n_clusters = self.settings.max_speakers   # Установите значение n_clusters по умолчанию
                 except: 
                      raise ValueError('If "n_clusters" is not specified you need "max_speakers"')
                 
-            clustering = Birch(threshold=self.settings['eps'], n_clusters=n_clusters)
+            clustering = Birch(threshold=self.settings.eps , n_clusters=n_clusters)
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels
@@ -316,7 +318,7 @@ class ClusteringModel:
                 Cluster labels for each embedding.
             """
 
-            clustering = OPTICS(min_samples=self.settings['min_samples'], max_eps=self.settings['eps'])
+            clustering = OPTICS(min_samples=self.settings.min_samples , max_eps=self.settings.eps )
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels
@@ -333,9 +335,9 @@ class ClusteringModel:
                 Cluster labels for each embedding.
             """
 
-            clustering = hdbscan.HDBSCAN(min_cluster_size=self.settings['min_cluster_size'],
-                                            min_samples=self.settings['min_samples'],
-                                            metric=self.settings['affinity'])  # Используем metric из настроек
+            clustering = hdbscan.HDBSCAN(min_cluster_size=self.settings.min_cluster_size ,
+                                            min_samples=self.settings.min_samples ,
+                                            metric=self.settings.affinity )  # Используем metric из настроек
             cluster_labels = clustering.fit_predict(embeddings)
 
             return cluster_labels

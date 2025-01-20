@@ -22,6 +22,7 @@ import json
 from typing import Dict
 import torchaudio
 from yandex import load_audio_from_yandex
+from setttings import Settings
 
 def read_json(json_path):
             with open(json_path, 'r', encoding='utf-8') as f:
@@ -225,55 +226,46 @@ def load_model(language: str, model_size: str):
     print(f'Loaded {model_name} model')
     return current_model
 
+
+
+def load_desilencer(settings, device:str)->Callable:
+            """
+            Loads the VAD pipeline to remove silent zones.
+            """
+            vad_pipeline = Pipeline.from_pretrained("pyannote/voice-activity-detection",
+                              use_auth_token=settings.HUGGINGFACE_TOKEN ).to(device) #модель для удаления тишины
+            return vad_pipeline
+
+
 class AudioProcessor:
-        def __init__(self, language, modeltype, embedding_model_name, HUGGINGFACE_TOKEN=None, accuracy_boost=False, silence= False  ):
+        def __init__(self, settings: Settings  ):
             """
             Initializes the audio processing system.
             """
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # девайс если есть, то gpu
             print(f"Using device: {self.device}")
-            self.language = language
-            self.embedding_model_name = embedding_model_name
-            self.huggingface_token = HUGGINGFACE_TOKEN
-            self.accuracy_boost = accuracy_boost
-            self.embedding_models_group1 = [
-            'pyannote/embedding',
-            'speechbrain/spkrec-ecapa-voxceleb',
-            'nvidia/speakerverification_en_titanet_large',
-            'hbredin/wespeaker-voxceleb-resnet34-LM'
-            ]
-            self.embedding_models_group2 = [
-                'titanet_large',
-                'ecapa_tdnn',
-                'speakerverification_speakernet'
-            ]
+            self.settings = settings
+
             # load whisper model
-            self.model = load_model(language, modeltype).to(self.device) 
+            self.model = load_model(self.settings.language, self.settings.modeltype).to(self.device) 
 
-            if silence:
+            if self.settings.Silence:
                 # Load VAD pipeline
-                self.vad_pipeline = self._load_desilencer()
+                self.vad_pipeline = load_desilencer(self.settings,self.device)
 
-            if self.accuracy_boost:
+            if self.settings.Accuracy_boost:
                 self.diarization_pipeline = self._load_accuracy_boost()
 
-            self.embedding_model, self.embedding_model_dimension = self._setup_embedding_model()
+            self.embedding_model, self.embedding_model_dimension, self.speaker_model = self._setup_embedding_model()
 
-        def _load_desilencer(self):
-            """
-            Loads the VAD pipeline to remove silent zones.
-            """
-            vad_pipeline = Pipeline.from_pretrained("pyannote/voice-activity-detection",
-                              use_auth_token=HUGGINGFACE_TOKEN ).to(self.device) #модель для удаления тишины
-            return vad_pipeline
-
+    
         def _load_accuracy_boost(self):
             """
             Loads the speaker diarization pipeline to improve accuracy.
             """
-            if Accuracy_boost:
+            if self.settings.Accuracy_boost:
                   pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization",
-                                use_auth_token=HUGGINGFACE_TOKEN).to(self.device)
+                                use_auth_token=self.settings.HUGGINGFACE_TOKEN).to(self.device)
             return pipeline 
         
 
@@ -281,14 +273,14 @@ class AudioProcessor:
             """
             Loads the embedding model based on the selected type.
             """
-            
+            speaker_model=None
             #global embedding_model , speaker_model
-            if self.embedding_model_name in self.embedding_models_group1:
+            if self.settings.embedding_model_name in self.settings.embedding_models_group1:
                     #модель эмбеддингов группы 1 (выбор: 'pyannote/embedding', 'speechbrain/spkrec-ecapa-voxceleb', 'nvidia/speakerverification_en_titanet_large' или 'hbredin/wespeaker-voxceleb-resnet34-LM' ) вставить ваш выбор + embedding_model_dimension= 512 для 'pyannote/embedding' и embedding_model_dimension= 192 для 'speechbrain/spkrec-ecapa-voxceleb' , для hbredin/wespeaker-voxceleb-resnet34-LM embedding_model_dimension= 512 , для 'nvidia/speakerverification_en_titanet_large' embedding_model_dimension= 192
-                    embedding_model = PretrainedSpeakerEmbedding( embedding_model_name, device=self.device,
-                                                                  use_auth_token=HUGGINGFACE_TOKEN)
+                    embedding_model = PretrainedSpeakerEmbedding( self.settings.embedding_model_name, device=self.device,
+                                                                  use_auth_token=self.settings.HUGGINGFACE_TOKEN)
 
-            elif self.embedding_model_name in self.embedding_models_group2:
+            elif self.settings.embedding_model_name in self.settings.embedding_models_group2:
                     try:
                         import nemo.collections.asr as nemo_asr
                     except ImportError as e:
@@ -296,7 +288,7 @@ class AudioProcessor:
                             "Nemo is required for this feature. Install it using: pip install ...[nemo]."
                         ) from e
                     #модель эмбеддингов группы 2 (выбор : 'titanet_large' , 'ecapa_tdnn' , 'speakerverification_speakernet') , embedding_model_dimension = X (искать в интернете/chatgpt)  , для titanet_large embedding_model_dimension=192 , для speakerverification_speakernet - 256 ...
-                    speaker_model = nemo_asr.models.EncDecSpeakerLabelModel.from_pretrained(model_name=self.embedding_model_name)
+                    speaker_model = nemo_asr.models.EncDecSpeakerLabelModel.from_pretrained(model_name=self.settings.embedding_model_name)
                     speaker_model = speaker_model.to(self.device)
 
                     def embedding_model(speaker_model, audio_waveform):
@@ -320,9 +312,9 @@ class AudioProcessor:
             else:
                     raise ValueError('Incorrect model name')
     
-            embedding_model_dimension = EMBEDDING_MODELS[self.embedding_model_name]
+            embedding_model_dimension = self.settings.EMBEDDING_MODELS[self.settings.embedding_model_name]
 
-            return embedding_model, embedding_model_dimension
+            return embedding_model, embedding_model_dimension , speaker_model
         
 
         def remove_overlap(self,main_audio):
@@ -333,17 +325,17 @@ class AudioProcessor:
             
             # Load the overlapped speech detection pipeline
             osd_pipeline = Pipeline.from_pretrained("pyannote/overlapped-speech-detection", 
-                                                    use_auth_token=HUGGINGFACE_TOKEN)
+                                                    use_auth_token=self.settings.HUGGINGFACE_TOKEN)
 
             #NOT REALLY CORRECT? I SHOULD RUN IT ON FRAGMETNS
             # ALSOO IDEALLY FRAGEMTNS SHOULD BE SPLIT IN A WAY WHERE SPEECH ENDS, NOT BY SETTING? OR SETTING+ENDING...
             main_wav='main_wav.wav'
-            subprocess.call(['ffmpeg', '-i', main_audio, '-ar', '16000', '-ac', '1', '-sample_fmt', 's16', '-frame_size', '400', '-y', main_wav])
+            subprocess.call(['ffmpeg', '-i', main_audio, '-ar', '16000', '-ac', '1', '-sample_fmt', 's16', '-y', main_wav])#'-frame_size', '400', 
             
             overlap_segments = osd_pipeline({"audio": main_wav})
 
             # Ensure the output folder exists
-            os.makedirs(CLIPPED_SEGMENTS, exist_ok=True)
+            os.makedirs(self.settings.CLIPPED_SEGMENTS, exist_ok=True)
 
             audio = Audio()
 
@@ -358,7 +350,7 @@ class AudioProcessor:
                     audio_waveform, _ = audio.crop(main_wav, clipped_audio)
 
                     # Save the clipped audio to a file
-                    output_path = os.path.join(CLIPPED_SEGMENTS, f"overlapped_segment_{i+1}.wav")
+                    output_path = os.path.join(self.settings.CLIPPED_SEGMENTS, f"overlapped_segment_{i+1}.wav")
 
                     audio_waveform= audio_waveform.squeeze(0)
                     sf.write(output_path, audio_waveform.numpy(), 16000)
@@ -468,7 +460,7 @@ def main_audio_preprocessing(model:Callable, wav_path:str, is_fragment:str ,main
                           result={}
                           for path, start, end in fragments:
                               print(f"обработка {path}")
-                              subprocess.call(['ffmpeg', '-i', path, '-ar', '16000', '-ac', '1', '-sample_fmt', 's16', '-frame_size', '400', '-y', wav_path])
+                              subprocess.call(['ffmpeg', '-i', path, '-ar', '16000', '-ac', '1', '-sample_fmt', 's16', '-y', wav_path]) #'-frame_size', '400',
 
                               if Silence:
                                  desilence(wav_path, vad_pipeline)
@@ -490,18 +482,18 @@ def main_audio_preprocessing(model:Callable, wav_path:str, is_fragment:str ,main
 
                               return result
                           
-def get_sample_embeddings(sample_audios: List, 
+def get_sample_embeddings(
+        settings: Settings,
+        sample_audios: List, 
         sample_vectors: List, 
         embedding_model: Callable, 
         speaker_model: Callable, 
-        embedding_models_group1: List[str], 
-        client:Callable,  
-        ATTEMTPS:int =3, 
-        ATTEMPTS_INTERVAL:int =3):
+        client:Callable=None ):
         """
         Processes audio samples, extracts embeddings, and updates vector storage.
 
         Args:
+            settings(Settings): Dataclass instace that stores all settings
             sample_audios (List): List of audio samples.
             sample_vectors (List): List of vectors to be updated.
             embedding_model (Callable): Model for extracting embeddings.
@@ -532,7 +524,7 @@ def get_sample_embeddings(sample_audios: List,
                     sample_clip = Segment(0, sample_duration)
                     sample_waveform, _ = sample_audio.crop(sample_wav_path, sample_clip)
 
-                    if embedding_model_name in embedding_models_group1:
+                    if settings.embedding_model_name in settings.embedding_models_group1:
                         sample_embedding= embedding_model(sample_waveform[None])
                     else:
                         sample_embedding=embedding_model(speaker_model, sample_waveform[None]).cpu()
@@ -540,8 +532,8 @@ def get_sample_embeddings(sample_audios: List,
                     sample_embeddings.append([ sample_embedding, name ] )
                     dict_for_json[f'{sample_path}']=[sample_embedding.tolist()]
 
-                    if Add:
-                        add_vectors(sample_vectors, client, dict_for_json, 'downloaded.json', ATTEMTPS, ATTEMPTS_INTERVAL)
+                    if settings.Add:
+                        add_vectors(settings, sample_vectors, client, dict_for_json, 'downloaded.json')
 
             return sample_embeddings
         
@@ -587,7 +579,7 @@ def replace_overlaps(segments:List[Dict], sep_model:Callable, model:Callable, ov
 
           
 
-def use_vectors(sample_vectors:List[List], client=None, ATTEMPTS= 3, ATTEMPTS_INTERVAL=3, output_path:str = "downloaded.json" )-> List[List]:
+def use_vectors(settings: Settings,sample_vectors:List[List], client=None, output_path:str = "downloaded.json" )-> List[List]:
             '''Using vectorised samples instead of sample audios
             
                 Args:
@@ -605,7 +597,7 @@ def use_vectors(sample_vectors:List[List], client=None, ATTEMPTS= 3, ATTEMPTS_IN
                             try:
                                 client.download(
                                     json_path, output_path, 
-                                    n_retries=ATTEMPTS, retry_interval=ATTEMPTS_INTERVAL
+                                    n_retries=settings.ATTEMPTS, retry_interval=settings.ATTEMPTS_INTERVAL
                                 )
                                 json_path = output_path
                             except Exception as e:
@@ -627,7 +619,7 @@ def use_vectors(sample_vectors:List[List], client=None, ATTEMPTS= 3, ATTEMPTS_IN
 
 
 
-def add_vectors(sample_vectors:List, client:Callable, dict_for_json:dict, output_path:str="downloaded.json", ATTEMTPS:int=3, ATTEMPTS_INTERVAL:int=3):
+def add_vectors(settings: Settings, sample_vectors:List, client:Callable, dict_for_json:dict, output_path:str="downloaded.json"):
             """
             Converts audio to vectors and stores them in a JSON file.
 
@@ -641,7 +633,7 @@ def add_vectors(sample_vectors:List, client:Callable, dict_for_json:dict, output
             """
             for json_path, name , folder_name in sample_vectors:
                     if client:
-                            client.download(json_path, output_path, n_retries = ATTEMTPS  , retry_interval =ATTEMPTS_INTERVAL)
+                            client.download(json_path, output_path, n_retries = settings.ATTEMPTS  , retry_interval =settings.ATTEMPTS_INTERVAL)
                             json_path_copy= json_path
                             json_path= os.path.join(os.path.getcwd(), output_path)
                             
@@ -651,7 +643,7 @@ def add_vectors(sample_vectors:List, client:Callable, dict_for_json:dict, output
                         with open(json_path, 'w') as f:
                                 json.dump(vectorized_sample_old, f, indent=4)
                         if client:
-                                client.upload(json_path, json_path_copy, n_retries = ATTEMTPS  , retry_interval =ATTEMPTS_INTERVAL)
+                                client.upload(json_path, json_path_copy, n_retries = settings.ATTEMPTS  , retry_interval =settings.ATTEMPTS_INTERVAL)
                     else:
                           raise NameError(f'{json_path} does not exist, probably downloading that from yandex failed' )
                     
@@ -659,11 +651,12 @@ def add_vectors(sample_vectors:List, client:Callable, dict_for_json:dict, output
 
 
 
-def segment_embedding(segment: dict, 
+def segment_embedding(
+                        settings: Settings,
+                        segment: dict, 
                         embedding_model: Callable, 
                         wav_path: str, 
                         embedding_model_dimension: int, 
-                        embedding_models_group1: List[str], 
                         duration: float, 
                         speaker_model: Callable ):
                         """
@@ -674,7 +667,6 @@ def segment_embedding(segment: dict,
                             embedding_model (Callable): Model for extracting embeddings.
                             wav_path (str): Path to the WAV file.
                             embedding_model_dimension (int): Dimension of the embedding vector.
-                            embedding_models_group1 (List[str]): Group of embedding models.
                             duration (float): Duration of the WAV file.
                             speaker_model (Callable): Model for speaker embedding.
                         
@@ -698,17 +690,17 @@ def segment_embedding(segment: dict,
                             print(f"Warning: Empty waveform for segment: {start} to {end}")
                             return np.zeros(embedding_model_dimension)
 
-                        if embedding_model_name in embedding_models_group1:
+                        if settings.embedding_model_name in settings.embedding_models_group1:
                             return embedding_model(waveform[None])
                         else:
                             return embedding_model(speaker_model, waveform[None]).cpu()
 
 def get_embeddings_main_audio(
+            settings: Settings,
             wav_path: str, 
             segments: List[dict], 
             embedding_model: Callable, 
             embedding_model_dimension: int, 
-            embedding_models_group1: List[str], 
             speaker_model: Callable, 
                     ):
                     """
@@ -719,7 +711,6 @@ def get_embeddings_main_audio(
                         segments (List[dict]): List of segment dictionaries containing "start" and "end".
                         embedding_model (Callable): Model for extracting embeddings.
                         embedding_model_dimension (int): Dimension of the embedding vector.
-                        embedding_models_group1 (List[str]): Group of embedding models.
                         speaker_model (Callable): Model for speaker embedding.
 
                     Returns:
@@ -729,19 +720,21 @@ def get_embeddings_main_audio(
                     embeddings = np.zeros(shape=(len(segments), embedding_model_dimension))
 
                     for i, segment in enumerate(segments):
-                      if embedding_model_name in embedding_models_group1:
-                        embeddings[i] = segment_embedding(segment, 
+                      if settings.embedding_model_name in settings.embedding_models_group1:
+                        embeddings[i] = segment_embedding(
+                                                          settings,
+                                                          segment, 
                                                           embedding_model, 
                                                           wav_path,embedding_model_dimension,
-                                                          embedding_models_group1, 
                                                           duration, 
                                                           speaker_model  )
                       else:
-                        embeddings[i] = segment_embedding(segment, 
+                        embeddings[i] = segment_embedding(
+                                                          settings,
+                                                          segment, 
                                                           embedding_model,
                                                           wav_path,
                                                            embedding_model_dimension,
-                                                           embedding_models_group1,
                                                             duration, speaker_model ).cpu()
                     
                     return embeddings

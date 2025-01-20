@@ -1,5 +1,4 @@
 import os
-from constants import ATTEMPTS, ATTEMPTS_INTERVAL
 import unicodedata
 import warnings
 import json
@@ -57,7 +56,7 @@ class FolderTree():
                         folder_path (str): abs. path to a folder
                """
                if self.client:
-                    self.client.mkdir(folder_path, n_retries = ATTEMPTS  , retry_interval =ATTEMPTS_INTERVAL)
+                    self.client.mkdir(folder_path, n_retries = self.ATTEMPTS  , retry_interval = self.ATTEMPTS_INTERVAL)
                else:
                     os.mkdir(folder_path)
 
@@ -88,8 +87,12 @@ class FolderTree():
                         match_found=True
                         break
                 if not match_found:
-                    name=name.strip()
+                    name=participant_name.strip()
                     folder= os.path.join (self.folder_path, ' '.join(participant_name_split))
+                    #temporary solution
+                    if self.client:
+                           folder=folder.replace('\\','/')
+                           
                     warnings.warn(f'for participant {name} folder was not found, creating a new folder:{ folder }')
                     self.create_folder(folder)
                     matched_pairs.append([folder, participant_name])
@@ -124,11 +127,14 @@ def fetch_vectors_and_audio_files(participant_folder_paths:List[str], participan
                    else:
                           return os.listdir(folder)     
                               
-            def create_vector_file(empty_json_path:str,  client:Callable=None, ATTEMPTS=3, ATTEMPTS_INTERVAL= 3):
+            def create_vector_file(empty_json_path:str, client:Callable=None, temp_path:str='empty.json',  ATTEMPTS=3, ATTEMPTS_INTERVAL= 3):
                     """Creates an empty JSON file for a participant if none exists."""
                     if client:
                          with client:
-                                client.upload(empty_json_path, empty_json_path, n_retries = ATTEMPTS  , retry_interval =ATTEMPTS_INTERVAL )
+                                with open(temp_path, 'w') as f:
+                                            json.dump({}, f)
+                                client.upload(temp_path, empty_json_path, n_retries = ATTEMPTS  , retry_interval =ATTEMPTS_INTERVAL )
+                                os.remove(temp_path)
                     else:                        
                             with open(empty_json_path, 'w') as f:
                                             json.dump({}, f)
@@ -152,7 +158,10 @@ def fetch_vectors_and_audio_files(participant_folder_paths:List[str], participan
                                                     
                                 if  not any(name == vector[1] for vector in sample_vectors) :
                                         empty_json_path = os.path.join(folder, f"{name}.json")
-                                        create_vector_file(empty_json_path, client, ATTEMPTS, ATTEMPTS_INTERVAL)
+                                         #temporary solution
+                                        if client:
+                                            empty_json_path=empty_json_path.replace('\\','/')
+                                        create_vector_file(empty_json_path, client, 'empty.json' ,ATTEMPTS, ATTEMPTS_INTERVAL)
                                         sample_vectors.append([empty_json_path, name, folder])
 
             sample_audios = []

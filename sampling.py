@@ -1,37 +1,35 @@
 import re
 from file_manager import FolderTree
 import os
-from typing import Callable
+from setttings import Settings
 from file_manager import fetch_vectors_and_audio_files
 import soundfile as sf
 from pyannote.audio import Audio
 from pyannote.core import Segment
 import numpy as np
+import torch
+from audio_processing import load_desilencer
+import yadisk
+import librosa
+from video import get_duration
 #00:00:00-00:01:00
 
 transcribed_audio='''
-[0:00:19,000 --> 0:00:21,000] Ермолаева Ирина:  Да ничего страшного Алексей
-[0:00:21,000 --> 0:00:23,000] Ермолаева Ирина:  главное что мы все собрались
-[0:00:23,000 --> 0:00:25,000] Ермолаева Ирина:  сегодня у нас с вами будет встреча с Александрой
-[0:00:25,000 --> 0:00:27,000] Ермолаева Ирина:  Александр у нас
-[0:00:27,000 --> 0:00:29,000] Ермолаева Ирина:  Александр как сейчас должность
-[0:21:38,000 --> 0:21:41,000] Пчеловодова Александра:  Здесь от вас не ожидается никаких
-[0:21:41,000 --> 0:21:44,000] Пчеловодова Александра:  дополнительных описаний, интеграций и так далее.
-[0:21:44,000 --> 0:21:48,000] Пчеловодова Александра:  Это чисто такое тезис пользовательской точки зрения.
-[0:21:48,000 --> 0:21:51,000] Пчеловодова Александра:  Там вот описание странички, что на ней есть,
-[0:21:51,000 --> 0:21:55,000] Пчеловодова Александра:  как те или иные элементы взаимодействуют между собой,
-[0:21:55,000 --> 0:21:57,000] Пчеловодова Александра:  как те или иные страницы сметчатся,
-[0:21:57,000 --> 0:22:00,000] Пчеловодова Александра:  как те или иные поля, грубо говоря.
-[0:22:00,000 --> 0:22:07,900] Пчеловодова Александра:  Соответственно, команда будет проводить параллельно работы по написанию back-end-up для админки,
-[0:22:07,900 --> 0:22:13,259] Пчеловодова Александра:  потом фронта и, соответственно, параллельно поддерживать текущие новостные сайты.
-[0:22:13,259 --> 0:22:16,799] Пчеловодова Александра:  По ним прилетают порой горящие задачи и так далее.
-[0:22:16,799 --> 0:22:21,500] Пчеловодова Александра:  Я хочу сделать также, что специфика работы — это то, что все-таки не дикая, это 24 на 7.
-[0:22:21,500 --> 0:22:27,740] Пчеловодова Александра:  То есть если какие-то бывают поломки, и не факт, что там техподдержка может управляться
-[0:22:27,740 --> 0:22:31,539] Пчеловодова Александра:  или их обрабатывать, или просто вам нужно как проекту подключиться,
-[0:22:31,539 --> 0:22:36,039] Пчеловодова Александра:  то есть могут вам позвонить в любое время дня и ночи, праздник, не праздник, еще что-то.
-[0:22:36,039 --> 0:22:39,539] Пчеловодова Александра:  Это специфика сферы, нужно это учитывать.
-[0:22:39,539 --> 0:22:45,299] Пчеловодова Александра:  Естественно, такие-то переработки и так далее оплачиваются, но это не та работа,
-[0:22:45,299 --> 0:22:49,339] Пчеловодова Александра:  где ты закончил работать в 7 вечера, закрыл ноутбук и ушел.
+[0:00:00,000 --> 0:00:01,960] Бобр1 нео:  Так, ну что, смотрим твою квартиру.
+
+[0:00:01,960 --> 0:00:03,960] Бобр2 нео:  Честно сказать, смотреть особо нечего.
+
+[0:00:03,960 --> 0:00:05,360] Бобр1 нео:  Это такое чисто по классике, да?
+
+[0:00:05,360 --> 0:00:06,599] Бобр1 нео:  По классике, суперапоклассики.
+
+[0:00:06,599 --> 0:00:11,599] Бобр2 нео:  Я люблю суперапоклассики, и в основном это только Nike, Jordan, единички, четверки.
+
+[0:00:11,599 --> 0:00:14,320] Бобр2 нео:  И что-то такие иногда из каких-то редких пар появляются.
+
+[0:00:14,320 --> 0:00:16,600] Кот Бобр1 нео:  Дорогие модели есть?
+
+[0:00:16,600 --> 0:00:18,280] Кот бобр1 нео:  Например, вот эта, сколько? Вот эта вроде.
 '''
 
 
@@ -51,6 +49,7 @@ def parse_text(line:str):
         pattern_name = re.compile(r'(?<=\])\s*(.*?)(?=:)\s*')
         pattern_text = re.compile('(?<=:) .*')
 
+        #names don't have digits!!!??!?
         name= re.search ( pattern_name, line).group(0).strip()
         time_start=re.search ( pattern_time_start, line).group(0).strip() #need to convert from '0:01:49,000' to seconds
         time_end= re.search ( pattern_time_end, line).group(0).strip() #need to convert from '0:01:49,000' to seconds
@@ -73,17 +72,23 @@ def save_sample(sample_path:str, waveform:'np.array'= None, client=None,  ATTEMP
         else: 
                 sf.write(sample_path, waveform, samplerate=16000, format='WAV')
          
-def create_samples(transcribed_audio:str, main_folder:str, main_audio_wav_path:str, main_audio:str, mode:str, vad_pipeline:Callable, client: Callable=None, ATTEMPTS:int=3, ATTEMPTS_INTERVAL:int= 3 ):
+def create_samples(settings: Settings, client=None,  vad_pipeline=None ):
         '''Creating samples of audio...
 
             Args:
                 transcribed_audio(str):
                 client (Callable): 
-
                 
             Returns:
                 None
         '''
+        if settings.mode=='yandex':
+               client = yadisk.Client(token=settings.token_yandex  )
+        #already find device in audio_processing, correct it later
+        device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if not vad_pipeline:
+                vad_pipeline = load_desilencer(settings, device )
+        
         transcribed_audio_lines= transcribed_audio.split('\n')
         transcribed_audio_lines=[line for line in transcribed_audio_lines ] #if len(line)>3 removed
 
@@ -95,54 +100,70 @@ def create_samples(transcribed_audio:str, main_folder:str, main_audio_wav_path:s
 
         for line in transcribed_audio_lines:
 
+            if line == '':
+                    continue
+            
             last_number=0
-            flag=False
+            
+            time_start, time_end, name, text = parse_text(line) #maybe will use text to create dataset
 
             time_start = str_to_seconds(time_start)
             time_end= str_to_seconds(time_end)
             
-            time_start, time_end, name, text = parse_text(line) #maybe will use text to create dataset
 
-            folders_manager = FolderTree(main_folder, 'yandex', participants, ATTEMPTS, ATTEMPTS_INTERVAL, client)
+            folders_manager = FolderTree(settings.main_folder, settings.PARTICIPANTS, settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL, client)
 
             participant_folder_paths , participants = folders_manager.process_subfolders()
-
+            participant_folder_paths , participants = list(participant_folder_paths) , list(participants)
             if not name in participants:
                 participants.append(name)
-                participant_folder_paths.append(os.path.join(main_folder, name))
 
+            folders_manager = FolderTree(settings.main_folder, participants, settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL, client)
+            participant_folder_paths , participants = folders_manager.process_subfolders()
+            participant_folder_paths , participants = list(participant_folder_paths) , list(participants)
 
             #I should get last_number from here !
-            sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, mode, client, ATTEMPTS, ATTEMPTS_INTERVAL)
+            sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants,client, settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL)
 
             #taking only relevant sample_audios
             sample_audios = [item for item in sample_audios if item[1]==name]
-
-            last_number=1
+            sample_vectors=  [item for item in sample_vectors if item[1]==name]
+            folder= sample_vectors[-1][-1]
+            last_number=0
             for path, _, folder in sample_audios:
                    number = re.search(r'\d+.wav', path)
+                   number=number.group(0)
                    number = int(number.split('.')[0])
                    if number > last_number:
                            last_number = number
-                           
+            
             #Or hm, calcualte 
-            if name and flag:
+            if name:
 
                     #I use numbers because just counting number of files will lead to errors like double files when we delete some files
-                    i=last_number 
-
                     #path hm, default value is name of main audio? if not def., we specify 
                     #what if main_audio downloaded ? then deafault 'downloaded'
-                    source_of_sample = main_audio.split('/')[-1].split('.')[0]
-                    sample_name = f'{source_of_sample}-{name}_{i+1}.wav'
+                    source_of_sample = settings.main_audio.split('/')[-1].split('.')[0]
+                    sample_name = f'{source_of_sample}-{name}_{last_number+1}.wav'
                     
+                
                     sample_path=os.path.join( folder,  sample_name )
+                    #temporary solution
+                    if client:
+                           sample_path=sample_path.replace('\\','/')
 
+                    
                     #creating audio sample
                     sample_audio = Audio()
                     sample_clip = Segment( time_start , time_end)
-                    #'audio.wav'
-                    sample_waveform, _ = sample_audio.crop(main_audio_wav_path, sample_clip)
+
+                    data, sr = librosa.load(settings.main_audio_wav_path, sr=16000)
+                    #temp solution!
+                    try:  # Stereo case
+                        data = data.T  # Transpose to (frames, channels)
+                        sf.write(settings.main_audio_wav_path, data, sr)
+                    except: pass
+                    sample_waveform, _ = sample_audio.crop(settings.main_audio_wav_path, sample_clip)
                     sample_waveform=sample_waveform.squeeze(0)
                     sample_waveform=sample_waveform.squeeze(0)
 
@@ -155,9 +176,11 @@ def create_samples(transcribed_audio:str, main_folder:str, main_audio_wav_path:s
                     if len(time_segments)>0:
                                     audio_tool = Audio()
                                     waveforms=[]
-                                  
+                                    duration = get_duration('cropped_fragment.wav')
                                     for time_segment in time_segments:
-                                        main_clip = Segment( time_segment.start , time_segment.end)
+                                        #temp solution!
+                                        end=min(time_segment.end, duration)
+                                        main_clip = Segment( time_segment.start, end)
                                         main_waveform, _ = audio_tool.crop('cropped_fragment.wav', main_clip)
                                         main_waveform=main_waveform.squeeze(0)
                                         main_waveform=main_waveform.squeeze(0)
@@ -174,7 +197,11 @@ def create_samples(transcribed_audio:str, main_folder:str, main_audio_wav_path:s
                     #clean trash here! and make more efficient 
                     count+=1
                     print('Saving to:', sample_path)
-                    
-        os.remove('cropped_fragment.wav')
+
+        #temp solution
+        try:   
+              os.remove('cropped_fragment.wav')
+        except:
+              pass
         print('Fragments added: ', count)
 

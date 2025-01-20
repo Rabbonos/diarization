@@ -123,7 +123,7 @@ def standardize_audio(audio_path, output_path):
         try:
             subprocess.call([
                 'ffmpeg', '-i', audio_path, '-ar', '16000', '-ac', '1',
-                '-sample_fmt', 's16', '-frame_size', '400', '-y', output_path
+                '-sample_fmt', 's16', '-y', output_path #'-frame_size', '400',
             ])
         except Exception as e:
             print(f"Error during audio standardization: {e}")

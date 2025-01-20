@@ -8,11 +8,14 @@ from video import get_duration
 from audio_processing import read_json, standardize_audio
 from typing import Callable,List
 from yandex import handle_yandex_json
+from setttings import Settings
+import yadisk
+from audio_processing import AudioProcessor
 # Обновление векторов (только тех участников, которых отметили в настройках + у которых было обнаружено аудио т.к. без аудио не будет векторов).
 
     
 
-def clear_vectors(participants:List, sample_vectors:List[str,str,str], client:Callable=None):
+def clear_vectors(participants:List, sample_vectors:List, client:Callable=None):
         '''clearing vectors of some participants we want to upgrade before upgrading them''' 
         if client:
             for jsonfile, name, folder_name in sample_vectors:
@@ -30,7 +33,8 @@ def clear_vectors(participants:List, sample_vectors:List[str,str,str], client:Ca
                         warnings.warn(f'For {name}, jsonfile {jsonfile} could not be deleted')
 
 #participants only the ones we specify (new setting for that)
-def upgrade_vectors(main_folder:str, participants:List[str], embedding_model:str, embedding_model_name:str, embedding_models_group1:List , speaker_model=None, client:Callable=None, ATTEMPTS:int=3, ATTEMPTS_INTERVAL:int=3):
+#main_folder:str, participants:List[str], embedding_model:str, embedding_model_name:str, embedding_models_group1:List , speaker_model=None, client:Callable=None, ATTEMPTS:int=3, ATTEMPTS_INTERVAL:int=3
+def upgrade_vectors(settings:Settings):
         '''Upgrades vector json files for specified participants
         
             Args:
@@ -39,20 +43,28 @@ def upgrade_vectors(main_folder:str, participants:List[str], embedding_model:str
             Returns:
                 None
         '''
-        folders_manager = FolderTree(main_folder, 'yandex', participants, ATTEMPTS, ATTEMPTS_INTERVAL, client)
+        #anyway all is cached , so no need to give from transcibe model here
+        audio_models_loading = AudioProcessor(settings)
+        embedding_model, speaker_model = audio_models_loading.embedding_model, audio_models_loading.speaker_model 
+
+        if settings.mode=='yandex':
+                client = yadisk.Client(token=settings.token_yandex  )
+        else:
+             client = None
+        folders_manager = FolderTree(settings.main_folder, settings.PARTICIPANTS, settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL, client)
 
         #sample_folders_restore participants
         participant_folder_paths , participants = folders_manager.process_subfolders()
 
-        sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, client, ATTEMPTS, ATTEMPTS_INTERVAL)
+        sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, client,  settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL)
 
-        sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants,client, ATTEMPTS, ATTEMPTS_INTERVAL)
+        #sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants,client,  settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL)
 
         print(sample_audios,'sample_audios')
         for sample_path, name, folder_name in sample_audios:
 
                 if client:
-                    client.download(sample_path, 'sample_path', n_retries = ATTEMPTS  , retry_interval =ATTEMPTS_INTERVAL )
+                    client.download(sample_path, 'sample_path', n_retries = settings.ATTEMPTS  , retry_interval =settings.ATTEMPTS_INTERVAL )
                 
                 dict_for_json={}
                 sample_audio = Audio()
@@ -67,11 +79,11 @@ def upgrade_vectors(main_folder:str, participants:List[str], embedding_model:str
 
                 if sample_duration<1:
                     continue
-
+                ################################take embedding model from transcribe or define  a new one here + speaker model
                 try:
                     sample_clip = Segment(0, sample_duration)
                     sample_waveform, _ = sample_audio.crop(sample_wav_path, sample_clip)
-                    if embedding_model_name in embedding_models_group1:
+                    if settings.embedding_model_name in settings.embedding_models_group1:
                         sample_embedding= embedding_model(sample_waveform[None])
                     else:
                         sample_embedding=embedding_model(speaker_model, sample_waveform[None]).cpu()
@@ -82,11 +94,12 @@ def upgrade_vectors(main_folder:str, participants:List[str], embedding_model:str
                         if normalize_string(name) == normalize_string(name_):
                                 if client:
                                     json_path=os.path.join(folder_name ,  f'{name}.json')
+                                    json_path = json_path.replace('\\','/')
                                 else:
-                                    json_path= os.path.join(  main_folder ,'Образцы голоса', folder_name ,  f'{name}.json')
+                                    json_path= os.path.join(  settings.main_folder ,'Образцы голоса', folder_name ,  f'{name}.json')
                                 found=False
                                 if client:
-                                        files= client.listdir(folder_name, n_retries = ATTEMPTS  , retry_interval =ATTEMPTS_INTERVAL)
+                                        files= client.listdir(folder_name, n_retries = settings.ATTEMPTS  , retry_interval =settings.ATTEMPTS_INTERVAL)
                                         for path in files:
                                             path = path['path']
                                             if normalize_string(path) == normalize_string(json_path):
@@ -98,8 +111,8 @@ def upgrade_vectors(main_folder:str, participants:List[str], embedding_model:str
                                                                 name=name,
                                                                 dict_for_json=dict_for_json)
                                 else:
-                                    for path in os.listdir( os.path.join( main_folder ,'Образцы голоса', folder_name )):
-                                            path= os.path.join(  main_folder ,'Образцы голоса', folder_name , path )
+                                    for path in os.listdir( os.path.join( settings.main_folder ,'Образцы голоса', folder_name )):
+                                            path= os.path.join(  settings.main_folder ,'Образцы голоса', folder_name , path )
                                             if normalize_string(path.strip()) == normalize_string(json_path.strip()):
                                                 found=True
                                                 break

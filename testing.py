@@ -48,6 +48,16 @@ def parse_time_range(text:str, audio_len:int)-> tuple[int,int]:
 
 
 # write_to_word('hi\n my name is Ali\n And your?', r'C:\Users\Ali\Desktop\newword.docx')
-import torch
-print(torch.cuda.is_available())
-print(torch.version.cuda)
+# import torch
+# print(torch.cuda.is_available())
+# print(torch.version.cuda)
+
+
+import librosa
+import soundfile as sf
+
+data, sr = librosa.load("main_audio.wav", sr=None, mono=False)
+print(data.ndim)
+if data.ndim == 2:  # Stereo case
+    data = data.T  # Transpose to (frames, channels)
+sf.write("output_file.wav", data, sr)

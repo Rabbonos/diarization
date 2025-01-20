@@ -1,0 +1,157 @@
+# Mode of operation: can be 'local', 'google colab - drive', or 'yandex'
+mode: 'yandex'
+
+# Language setting for Whisper (Russian in this case)
+language: 'Russian'
+
+# Size of the Whisper model (options: tiny, base, small, medium, turbo, large)
+modeltype: 'medium'
+
+# Main folder containing participant audios (adjust path depending on your environment)
+main_folder: '/diarization_project/Образцы голоса'
+
+# Temporary folders for storing audio processing files
+TEMP_FOLDER_MAIN: "main_audio"
+TEMP_FOLDER_FRAGMENTS: "fragmented_main"
+CLIPPED_SEGMENTS: "clipped_segments"
+
+# URL or path to the main audio file (for Yandex Disk, use the link)
+main_audio: 'https://disk.yandex.ru/i/uZ05epTJKC3E_g'
+
+main_audio_wav_path : 'main_audio.wav'
+# Source for downloading the main audio file (options: yandex, google, etc.)
+source: 'yandex'
+
+# List of participants (names should match folders with samples)
+PARTICIPANTS:
+  - 'Соколов Алексей'
+  - 'Гафарова Лилия'
+
+# Interval for transcription in format: "|start_time-end_time|"
+interval: "|00:00:00-00:01:00|"
+
+# Interval in seconds for dividing the audio into chunks (if applicable)
+divide_interval: 60
+
+# Option to fragment audio (options: 'да' or 'нет')
+is_fragment: "да"
+
+# Set to True for higher accuracy, but slower processing
+Accuracy_boost: true
+
+# Huggingface token for the model (required sometimes)
+HUGGINGFACE_TOKEN: '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'
+
+# Embedding model name used for speaker verification
+embedding_model_name: 'hbredin/wespeaker-voxceleb-resnet34-LM'
+
+# Whether voice samples exist for matching (True or False)
+Voice_sample_exists: true
+
+# Whether to use vector representation for speakers (True or False)
+Vector: true
+
+# Whether to add the vectors to a JSON file after processing (True or False)
+Add: false
+
+# Whether to save the transcriptions as text (True or False)
+save_txt: true
+
+# The format for saving the transcriptions: 'word', 'text', or 'none'
+save_mode: 'word'
+
+# Whether to include speaker labels in the output
+metki: true
+
+# Similarity threshold (between 0 and 1) for speaker clustering
+SIMILARITY_THRESHOLD: 0.6
+
+# Whether to enable clustering of speakers (True or False)
+clustering: true
+
+# Clustering settings
+cluster_settings:
+  # The algorithm used for clustering (options: AgglomerativeClustering, KMeans, etc.)
+  clustering_algorithm: 'AgglomerativeClustering'
+  
+  # Minimum number of speakers expected in the cluster
+  min_speakers: 2
+  
+  # Maximum number of speakers expected in the cluster
+  max_speakers: 6
+  
+  # Minimum size of a cluster in HDBSCAN algorithm
+  min_cluster_size: 1
+  
+  # Minimum number of samples required to form a cluster in HDBSCAN
+  min_samples: 1
+  
+  # DBSCAN's maximum distance for two points to be considered in the same cluster
+  eps: 0.5
+  
+  # Damping factor for Affinity Propagation
+  damping: 0.5
+  
+  # Bandwidth parameter for Mean Shift algorithm
+  bandwidth: 2.0
+  
+  # Linkage method for AgglomerativeClustering (options: 'average', 'complete', 'single')
+  linkage: 'complete'
+  
+  # Distance metric for clustering algorithms (options: 'euclidean', 'cosine', etc.)
+  affinity: 'cosine'
+  
+  # Number of initializations for KMeans
+  n_init: 10
+  
+  # Optional distance threshold (used in DBSCAN, HDBSCAN, and others)
+  distance_threshold: null
+  
+  # Number of clusters for algorithms like KMeans, set to null for automatic determination
+  n_clusters: null
+
+  random_state: null
+
+# Dictionary of embedding models with the dimensionality of each model
+EMBEDDING_MODELS:
+  pyannote/embedding: 512
+  speechbrain/spkrec-ecapa-voxceleb: 192
+  nvidia/speakerverification_en_titanet_large: 512
+  hbredin/wespeaker-voxceleb-resnet34-LM: 256
+  titanet_large: 512
+  ecapa_tdnn: 192
+  speakerverification_speakernet: 256
+
+embedding_models_group1:
+        - 'pyannote/embedding'
+        - 'speechbrain/spkrec-ecapa-voxceleb'
+        - 'nvidia/speakerverification_en_titanet_large'
+        - 'hbredin/wespeaker-voxceleb-resnet34-LM'
+            
+embedding_models_group2:
+    - 'titanet_large'
+    - 'ecapa_tdnn'
+    - 'speakerverification_speakernet'
+
+
+# Number of attempts to connect to Yandex Disk (if applicable)
+ATTEMPTS: 3
+
+# Time between attempts when connecting to Yandex Disk (in seconds)
+ATTEMPTS_INTERVAL: 3
+
+# Whether to remove silence segments from the audio
+Silence: false
+
+# Whether to remove overlapping segments from audio (e.g., overlapping speakers)
+remove_overlap: true
+
+# Yandex Disk client credentials for authentication
+client_secret: '1662041a5a3346f78b333d25dd9ee2ee'
+client_id: '33ae9428aa2c4d4ba7d5e84838260ec0'
+
+# Whether to get a new token for Yandex Disk authentication
+get_token: 'нет'
+
+# Yandex Disk token for authentication
+token_yandex: 'y0_AgAAAAAIK3i8AAyjygAAAAEVPRxRAABauhYSjdRHNZdlk3xmC-p9PQJtQA'
