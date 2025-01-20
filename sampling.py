@@ -14,25 +14,6 @@ import librosa
 from video import get_duration
 #00:00:00-00:01:00
 
-transcribed_audio='''
-[0:00:00,000 --> 0:00:01,960] Бобр1 нео:  Так, ну что, смотрим твою квартиру.
-
-[0:00:01,960 --> 0:00:03,960] Бобр2 нео:  Честно сказать, смотреть особо нечего.
-
-[0:00:03,960 --> 0:00:05,360] Бобр1 нео:  Это такое чисто по классике, да?
-
-[0:00:05,360 --> 0:00:06,599] Бобр1 нео:  По классике, суперапоклассики.
-
-[0:00:06,599 --> 0:00:11,599] Бобр2 нео:  Я люблю суперапоклассики, и в основном это только Nike, Jordan, единички, четверки.
-
-[0:00:11,599 --> 0:00:14,320] Бобр2 нео:  И что-то такие иногда из каких-то редких пар появляются.
-
-[0:00:14,320 --> 0:00:16,600] Кот Бобр1 нео:  Дорогие модели есть?
-
-[0:00:16,600 --> 0:00:18,280] Кот бобр1 нео:  Например, вот эта, сколько? Вот эта вроде.
-'''
-
-
 def str_to_seconds(time):
         time = time.split(':')
         hours = int(time[0])  # Convert hours to integer
@@ -72,7 +53,7 @@ def save_sample(sample_path:str, waveform:'np.array'= None, client=None,  ATTEMP
         else: 
                 sf.write(sample_path, waveform, samplerate=16000, format='WAV')
          
-def create_samples(settings: Settings, client=None,  vad_pipeline=None ):
+def create_samples(settings: Settings, transcribed_audio:str, client=None,  vad_pipeline=None ):
         '''Creating samples of audio...
 
             Args:

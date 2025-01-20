@@ -41,6 +41,7 @@ class Diarizator:
             self.settings=self.import_settings(path)
             self.vad_pipeline=None
             self.client=None
+            self.text=None
       def import_settings(self, path:str):
             with open(path, 'r', encoding='utf-8') as f:
                    settings = yaml.safe_load(f)
@@ -56,7 +57,7 @@ class Diarizator:
 
       def sample(self):
             #main audio  wav path
-            create_samples(self.settings, self.client ,self.vad_pipeline)
+            create_samples(self.settings, self.text, self.client ,self.vad_pipeline)
       
       def upgrade_vectors(self):
             upgrade_vectors(self.settings)
@@ -67,7 +68,9 @@ class Diarizator:
 if __name__ == '__main__':
 
       diarizator = Diarizator('settings.yaml')
-      diarizator.transcribe()
+      diarizator.text = '''
+[0:00:58,240 --> 0:01:00,000] Mr.X X:  Перчаточки это у меня.'''
+      diarizator.sample()
       #diarizator.sample()
       #diarizator.upgrade_vectors()
 
