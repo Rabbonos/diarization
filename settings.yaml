@@ -41,7 +41,7 @@ is_fragment: "да"
 Accuracy_boost: true
 
 # Huggingface token for the model (required sometimes)
-HUGGINGFACE_TOKEN: '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'
+HUGGINGFACE_TOKEN: '...'
 
 # Embedding model name used for speaker verification
 embedding_model_name: 'hbredin/wespeaker-voxceleb-resnet34-LM'
@@ -149,14 +149,14 @@ Silence: True
 remove_overlap: true
 
 # Yandex Disk client credentials for authentication
-client_secret: '1662041a5a3346f78b333d25dd9ee2ee'
-client_id: '33ae9428aa2c4d4ba7d5e84838260ec0'
+client_secret: '...'
+client_id: '...'
 
 # Whether to get a new token for Yandex Disk authentication
 get_token: 'нет'
 
 # Yandex Disk token for authentication
-token_yandex: 'y0_AgAAAAAIK3i8AAyjygAAAAEVPRxRAABauhYSjdRHNZdlk3xmC-p9PQJtQA'
+token_yandex: '...'
 
 #how to call undefined speakers
 undefiend_speaker: 'Участник (не определён)' 
