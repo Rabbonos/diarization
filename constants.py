@@ -184,5 +184,6 @@ settings = {
     'client_secret': "...",
     'client_id': "...",
     'get_token': 'нет',
-    'token_yandex': '...'
+    'token_yandex': '...',
+    'undefiend_speaker': 'Участник (не определён)'
 }

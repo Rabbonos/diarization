@@ -28,7 +28,7 @@ from transcribe import start
 from vectorize import upgrade_vectors
 from sampling import create_samples
 import yaml
-from setttings import ClusterSettings, Settings
+from settings import ClusterSettings, Settings
 
 
 #handle potential errors
@@ -70,7 +70,8 @@ if __name__ == '__main__':
       diarizator = Diarizator('settings.yaml')
       diarizator.text = '''
 [0:00:58,240 --> 0:01:00,000] Mr.X X:  Перчаточки это у меня.'''
-      diarizator.sample()
+      diarizator.transcribe()
       #diarizator.sample()
       #diarizator.upgrade_vectors()
 
+#in sampling i might have group 0, neewd to take into accoutna an empty line!

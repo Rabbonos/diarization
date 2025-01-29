@@ -1,6 +1,10 @@
 # Ignore Python virtual environment directory
 .venv/
 
+.vscode
+
+__pycache__
+
 # Ignore all .wav files
 *.wav
 

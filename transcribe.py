@@ -14,7 +14,7 @@ from Logging_config import configure_logging
 import logging
 from yandex import get_new_ytoken
 from constants import *
-from setttings import Settings
+from settings import Settings
 
 configure_logging()
 logger = logging.getLogger('newlogger')
@@ -148,14 +148,14 @@ def start(settings: Settings):
             #MAKE IT DIFFERENT, READ 'TO ADD'
             if not settings.Voice_sample_exists:
                 cluster_labels= clustering_manager.cluster(embeddings) ###
-                assigned_speakers = ["Участник (не определён)" for i in cluster_labels]
+                assigned_speakers = [settings.undefiend_speaker for i in cluster_labels]
 
             #OUTPUT BLOCK
             if settings.save_mode == 'text':
                     save_transcription(file_path, segments, assigned_speakers, duration, settings.metki)
 
             elif settings.save_mode == 'word':
-                    write_to_word(segments,assigned_speakers , duration, settings.metki, 'transcription.docx')
+                    write_to_word(segments,assigned_speakers , duration, settings, settings.metki)
 
             print_transcription(segments, assigned_speakers, duration, settings.metki)
 

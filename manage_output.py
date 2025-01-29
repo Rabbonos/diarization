@@ -1,9 +1,12 @@
 from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from typing import List, Optional
 import datetime
 import os
 import shutil
-
+from typing import Callable
+from settings import Settings
 
 # для меток
 def format_time_range(start, end):
@@ -20,8 +23,46 @@ def format_time_range(start, end):
         end_time = format_time(end)
         return f"[{start_time} --> {end_time}]"
 
+def format_word(document:Callable , word_line_part1:str, word_line_part2:str)->None:
+        '''
+        Formats word-document's body
+        '''
 
-def write_to_word(segments:List[dict], assigned_speakers:List[str], duration, include_timestamps:Optional[bool]=True,  output_path:str='transcription.docx'):
+        line_runs = document.add_paragraph(word_line_part1)
+        line_run=line_runs.runs[0]
+        line_run.font.name = "Calibri"
+        line_run.font.size = Pt(11)
+        line_run.bold = True 
+
+        line_run = line_runs.add_run(word_line_part2)
+        line_run.bold=False
+
+def merge_neighbor_segments(segments:List[dict], assigned_speakers:List[str], settings:Settings):
+       """
+        Merges consecutive segments if speakers are the same.
+        
+        Args:
+            segments (List[dict]): A list of segment dictionaries, each containing "start" and "text" keys.
+            assigned_speakers (List[str]): A list of speakers corresponding to each segment.
+            
+        Returns:
+            list: A list of merged segments.
+       """
+       merged_segments  = [segments[0]]
+       for i in range(1,len(segments)):
+                previous_speaker= assigned_speakers[i-1]
+                current_speaker = assigned_speakers[i]
+
+                if previous_speaker == current_speaker and current_speaker != settings.undefiend_speaker:
+                       merged_segments[-1]['end'] =segments[i]["end"]
+                       merged_segments[-1]['text'] = segments[i-1]['text'] + segments[i]['text']                   
+                else:
+                       merged_segments.append(segments[i])
+ 
+       return merged_segments
+
+
+def write_to_word(segments:List[dict], assigned_speakers:List[str], duration, settings, include_timestamps:Optional[bool]=True,  output_folder:str=None):
         """
         Writes transcription data to a Word file.
 
@@ -35,18 +76,40 @@ def write_to_word(segments:List[dict], assigned_speakers:List[str], duration, in
         Returns:
             None
         """
+        segments = merge_neighbor_segments(segments, assigned_speakers, settings)
+
+        if not output_folder:
+               output_folder = os.getcwd()
+               
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+        title = f"Расшифровка итоговая от {now}"
+        output_path= os.path.join(output_folder,title)
+
         # Create a new Word document
         document = Document()
+        title = document.add_paragraph(title)
+        title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        title_run = title.runs[0]
+        title_run.font.name = "Calibri"
+        title_run.font.size = Pt(16)
+        title_run.bold = True 
 
         for i in range(len(segments)):
                 speaker_name = assigned_speakers[i]
                 segment = segments[i]
                 end_time = segments[i + 1]["start"] if i + 1 < len(segments) else duration
                 time_range = format_time_range(segment["start"], end_time)
+                word_line_part2=f"{segment['text']}"
                 if include_timestamps:
-                        document.add_paragraph(f"\n{time_range} {speaker_name}: {segment['text']}")
+                        word_line_part1=f"\n{time_range} {speaker_name}:"
+                        format_word(document, word_line_part1, word_line_part2)
                 else:
-                        document.add_paragraph(f"\n{speaker_name}: {segment['text']}")
+                        word_line_part1=f"\n{speaker_name}:"
+                        format_word(document, word_line_part1, word_line_part2)
+
+        for paragraph in document.paragraphs:
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
 
         # Save the document
         document.save(output_path)

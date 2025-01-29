@@ -22,7 +22,7 @@ import json
 from typing import Dict
 import torchaudio
 from yandex import load_audio_from_yandex
-from setttings import Settings
+from settings import Settings
 
 def read_json(json_path):
             with open(json_path, 'r', encoding='utf-8') as f:

@@ -1,7 +1,7 @@
 import re
 from file_manager import FolderTree
 import os
-from setttings import Settings
+from settings import Settings
 from file_manager import fetch_vectors_and_audio_files
 import soundfile as sf
 from pyannote.audio import Audio
@@ -85,9 +85,13 @@ def create_samples(settings: Settings, transcribed_audio:str, client=None,  vad_
                     continue
             
             last_number=0
-            
-            time_start, time_end, name, text = parse_text(line) #maybe will use text to create dataset
 
+            #temp solution
+            try:
+                time_start, time_end, name, text = parse_text(line) #maybe will use text to create dataset
+            except:
+                   continue
+            
             time_start = str_to_seconds(time_start)
             time_end= str_to_seconds(time_end)
             

@@ -5,7 +5,7 @@ mode: 'yandex'
 language: 'Russian'
 
 # Size of the Whisper model (options: tiny, base, small, medium, turbo, large)
-modeltype: 'medium'
+modeltype: 'base'
 
 # Main folder containing participant audios (adjust path depending on your environment)
 main_folder: '/diarization_project/Образцы голоса'
@@ -16,7 +16,7 @@ TEMP_FOLDER_FRAGMENTS: "fragmented_main"
 CLIPPED_SEGMENTS: "clipped_segments"
 
 # URL or path to the main audio file (for Yandex Disk, use the link)
-main_audio: 'https://disk.yandex.ru/i/uZ05epTJKC3E_g'
+main_audio: 'https://disk.yandex.ru/i/ZwwfJk2-BGiZKw' #'https://disk.yandex.ru/i/uZ05epTJKC3E_g'
 
 main_audio_wav_path : 'main_audio.wav'
 # Source for downloading the main audio file (options: yandex, google, etc.)
@@ -26,6 +26,7 @@ source: 'yandex'
 PARTICIPANTS:
   - 'Соколов Алексей'
   - 'Гафарова Лилия'
+  - 'Голубкина Надежда'
 
 # Interval for transcription in format: "|start_time-end_time|"
 interval: "|00:00:00-00:01:00|"
@@ -54,6 +55,7 @@ Vector: true
 # Whether to add the vectors to a JSON file after processing (True or False)
 Add: false
 
+#ubrat ?
 # Whether to save the transcriptions as text (True or False)
 save_txt: true
 
@@ -141,7 +143,7 @@ ATTEMPTS: 3
 ATTEMPTS_INTERVAL: 3
 
 # Whether to remove silence segments from the audio
-Silence: false
+Silence: True
 
 # Whether to remove overlapping segments from audio (e.g., overlapping speakers)
 remove_overlap: true
@@ -155,3 +157,6 @@ get_token: 'нет'
 
 # Yandex Disk token for authentication
 token_yandex: 'y0_AgAAAAAIK3i8AAyjygAAAAEVPRxRAABauhYSjdRHNZdlk3xmC-p9PQJtQA'
+
+#how to call undefined speakers
+undefiend_speaker: 'Участник (не определён)' 

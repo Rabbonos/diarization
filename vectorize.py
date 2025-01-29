@@ -8,7 +8,7 @@ from video import get_duration
 from audio_processing import read_json, standardize_audio
 from typing import Callable,List
 from yandex import handle_yandex_json
-from setttings import Settings
+from settings import Settings
 import yadisk
 from audio_processing import AudioProcessor
 # Обновление векторов (только тех участников, которых отметили в настройках + у которых было обнаружено аудио т.к. без аудио не будет векторов).
@@ -58,6 +58,9 @@ def upgrade_vectors(settings:Settings):
 
         sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, client,  settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL)
 
+        clear_vectors(participants, sample_vectors, client)
+
+        sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants, client,  settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL)
         #sample_vectors, sample_audios =  fetch_vectors_and_audio_files(participant_folder_paths, participants,client,  settings.ATTEMPTS, settings.ATTEMPTS_INTERVAL)
 
         print(sample_audios,'sample_audios')

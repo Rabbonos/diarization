@@ -46,7 +46,10 @@ class FolderTree():
                else:
                     if not os.path.exists(self.folder_path):
                            raise FileNotFoundError(f"Folder was not found, path given:{self.folder_path}")
-                    return [os.path.abspath(folder) for folder in os.listdir(self.folder_path)]
+                    #abs path here works incorrectly for colab?
+                    #yep, os.path.abspath is realtive to system, in colab it won't take google drive's paths, hmm
+                    return [os.path.join(self.folder_path, folder) for folder in os.listdir(self.folder_path)]
+                    #return [os.path.abspath(folder) for folder in os.listdir(self.folder_path)]
 
 
         def create_folder(self, folder_path):            
