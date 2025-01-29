@@ -11,6 +11,7 @@ __pycache__
 # Ignore specific directories
 voices_split/
 main_audio/
+fragmented_main/
 
 main_audio.wav
 sample_sample.wav
