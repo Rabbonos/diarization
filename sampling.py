@@ -27,7 +27,7 @@ def parse_text(line:str):
 
         pattern_time_start = re.compile('(?<=\[).*(?=-->)')
         pattern_time_end = re.compile('(?<=-->).*(?=])')
-        pattern_name = re.compile('(?<=\])\s*(.*?)(?=:)\s*')
+        pattern_name = re.compile(r'(?<=\])\s*(.*?)(?=:)\s*')
         pattern_text = re.compile('(?<=:) .*')
 
         #names don't have digits!!!??!?
