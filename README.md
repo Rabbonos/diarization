@@ -17,6 +17,7 @@ This library enables audio diarization, the process of segmenting and labeling s
    - 📊 Visualization: Add graphs and interactive visualizations for audio data and diarization results.
    - 🧠 Advanced AI: Integrate machine learning (ML) and neural network (NN) features for superior accuracy.
    - ☁️ Cloud Deployment: Deploy the library on cloud platforms (e.g., AWS, Google Cloud) with Docker containerization.
+   - 🔧 Optimize code, use faster asr, remove silence faster (potentially remove ai from here)
     
 # 🛡️ Technologies to Be Added
    - Data Visualization: Tools like Plotly or Matplotlib for creating intuitive graphs.
